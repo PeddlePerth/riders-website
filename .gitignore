@@ -1,0 +1,15 @@
+*.sqlite3
+*.pyc
+# ignore webpack outputs
+app/static/bundle.js
+app/static/peddleweb.css
+dist/
+staticfiles/
+node_modules/
+pyenv/
+*.pem
+package-lock.json
+psql-data/
+peddleweb-backup*/
+peddleweb_data*/
+peddleweb_full*/

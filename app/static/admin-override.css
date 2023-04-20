@@ -1,0 +1,27 @@
+table {
+    caption-side: unset !important;
+}
+
+.deletelink {
+    box-sizing: content-box;
+}
+
+html, body {
+    font-size: unset;
+}
+
+* {
+    box-sizing: unset !important;
+}
+
+table, td, th {
+    border: unset;
+    border-collapse: unset;
+}
+
+.navbar ul > li {
+    list-style-type: none;
+    padding-top: 0px;
+    padding-bottom: 0px;
+    line-height: 24px;
+}

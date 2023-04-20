@@ -1,0 +1,7 @@
+{% load i18n %}
+<div class="token-widget" {% include "django/forms/widgets/attrs.html" %}>
+    <input type="hidden" name="{{ widget.name }}"{% if widget.value != None %} value="{{ widget.value|stringformat:'s' }}"{% endif %}{% include "django/forms/widgets/attrs.html" %}>
+    <input type="button" value="{% translate 'Clear' %}" class="token-clear"></input>
+    <input type="button" value="{% translate 'Generate Random Token' %}" class="token-set"></input>
+    &nbsp;{% translate 'Value: ' %}<code class="token-value">{{ widget.value|stringformat:'s' }}</code>
+</div>

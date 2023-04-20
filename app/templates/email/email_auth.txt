@@ -1,0 +1,10 @@
+Hi there {{ name }},
+
+Your 6-digit login code for the Peddle Perth Riders Website is:
+{{ auth_code }}
+
+This code will expire in 24 hours.
+
+Sent from {{ site_url }}
+Peddle Perth Pty Ltd, ABN 30 636 155 729
+

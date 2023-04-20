@@ -1,0 +1,145 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="{% static 'peddleweb.css' %}"/>
+        <link rel="icon" type="image/x-icon" href="{% static '/img/favicon.png' %}">
+
+        <script type="text/javascript" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+        {% block bootstrap %}
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
+            integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+        {% endblock %}
+
+        {% block reactjs %}
+        {% if react %}
+        {% if DEBUG %}
+        <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
+        <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
+        {% else %}
+        <script src="https://unpkg.com/react@17/umd/react.production.min.js" crossorigin></script>
+        <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js" crossorigin></script>
+        {% endif %}
+        <script src="https://unpkg.com/react-bootstrap@2.5.0/dist/react-bootstrap.min.js" crossorigin></script>
+        {% endif %}
+        {% endblock %}
+
+        {% block peddlejs %}
+        {% if react %}
+        <script type="text/javascript">
+            window.page_name = '{{ page_name }}';
+            window.jsvars = JSON.parse('{{ jsvars }}');
+        </script>
+        <script type="text/javascript" src="{% static 'bundle.js' %}"></script>
+        {% endif %}
+        {% endblock %}
+    
+        <title>{% block title %}Peddle Riders{% endblock %}</title>
+        {% block extrahead %}{% endblock %}
+
+        {% block blockbots %}<meta name="robots" content="NONE,NOARCHIVE">{% endblock %}
+        {% block adminhead %}{% endblock %}
+    </head>
+    <body class="{% if is_popup %}popup {% endif %}{% block bodyclass %}{% endblock %}" data-admin-utc-offset="{% now "Z" %}">
+        <div id="container">
+        {% block header %}{% if not is_popup %}
+        <nav class="navbar navbar-expand-md navbar-dark bg-dark">
+            <div class="container">
+                <div class="navbar-brand">
+                    <img src="{% static 'img/peddle-logo.png' %}" alt="PEDDLE" height="40"/>
+                </div>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNavDropdown">
+                    {% if request.user.is_authenticated %}
+                    <span class="navbar-text">
+                        Welcome, {{ request.user.first_name }}
+                    </span>
+                    {% endif %}
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        {% if request.user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link active" href="{% url 'home' %}">Profile</a>
+                        </li>
+                        {% if user.is_rider %}
+                        <li class="nav-item">
+                            <a class="nav-link active" href="{% url 'tours_rider_today' %}">My Tours</a>
+                        </li>
+                        {% endif %}
+                        <li class="nav-item">
+                            <a class="nav-link active" href="{% url 'tours_today' %}">Tour Schedules</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="{% url 'rider_list' %}">Rider Contacts</a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link active" href="{% url 'logout' %}">Logout</a>
+                        </li>
+                        {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link active" href="{% url 'login' %}">Login</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </nav>
+        {% if request.user.is_staff %}
+        <nav class="navbar navbar-expand-md bg-primary navbar-dark">
+            <div class="container">
+                <div class="navbar-brand">
+                    Admin Section
+                </div>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="adminNavDropdown">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="{% url 'tour_dashboard' %}">Tour Dashboard</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="{% url 'admin:peddleconcept_person_changelist' %}">Manage Riders</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="{% url 'admin:peddleconcept_venue_changelist' %}">Manage Venues</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="{% url 'admin:index' %}">Admin Site</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="{% url 'admin:password_change' %}">{% translate 'Change password' %}</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+        {% endif %}
+        {% endif %}
+        {% endblock %}
+        {% block basemessages %}
+        {% if messages %}
+        <ul class="messagelist">
+            {% for message in messages %}
+            <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% endblock %}
+
+        {% block container %}
+        <div id="content" class="{% block contentclass %}container{% endblock %}">
+            {% block page_content %} {% endblock %}
+        </div>
+        {% endblock container %}
+        </div>
+    </body>
+</html>

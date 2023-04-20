@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block page_content %}
+<h1>Rider Contact List</h1>
+<div class="row g-3 fw-bold fs-5">
+    <div class="col-3">Nickname</div>
+    <div class="col-5">Name</div>
+    <div class="col-4">Phone</div>
+</div>
+{% for r in riders %}
+<div class="border-top p-2">
+    <div class="row g-3">
+        <div class="col-3 fw-bold">
+            {{ r.display_name }}
+            {% if r.is_staff %}
+            <div class="ms-2 badge bg-primary">Admin</div>
+            {% endif %}
+        </div>
+        <div class="col-5">
+            {{ r.name }}
+        </div>
+        <div class="col-4">
+            {% if r.phone %}
+            <span class="bi-telephone-outbound-fill me-2"></span>
+            <a href="tel:{{ r.phone }}">{{ r.phone }}</a>
+            {% else %}
+            None
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

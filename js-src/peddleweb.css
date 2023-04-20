@@ -1,0 +1,890 @@
+:root {
+  --message-success-bg: #dfd;
+  --message-warning-bg: #ffc;
+  --message-error-bg: #ffefef;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    font-family: sans-serif !important;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+@media (min-width: 75em) {
+    .container {
+        max-width: 1280px;
+    }
+}
+
+#navbar {
+    margin-bottom: 12px;
+    background-color: #d8ff9d;
+    color: black !important;
+    width: 100%;
+}
+
+#navbar ul, #navbar ul > li {
+    list-style-type: none;
+    padding: 0;
+}
+
+#navbar ul {
+    overflow: auto; /* make parent expand for floating children */
+}
+
+#navbar li {
+    float: left;
+}
+
+#navbar a, #navbar p {
+    padding: 6px 14px;
+    margin: 0;
+    font-size: 12pt;
+    line-height: 20px;
+    display: inline-block;
+}
+
+#navbar a {
+    color: black !important;
+    font-weight: bold;
+    text-decoration: none !important;
+    background-color: #91c83e;
+}
+
+#navbar a:hover {
+    color: black;
+    background-color: #bcff57;
+    text-decoration: underline;
+}
+
+table, td, th {
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+
+td {
+    padding: 5px;
+}
+
+tr {
+    padding: 0;
+}
+
+.form-container {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 25em;
+    border-radius: 1.5em;
+    font-size: 12pt;
+    padding: 1.5em;
+}
+
+.form-container img {
+    width: 100%;
+    padding: 10px;
+}
+
+.form-container h1 {
+    text-align: center;
+}
+
+.form-p label {
+    display: block;
+    margin-right: 5px;
+    min-width: 8em;
+}
+
+.form-p .helptext {
+    display: block;
+    color: #444;
+    font-size: 80%;
+}
+.form-p .errorlist {
+    color: red;
+    list-style-type: none;
+}
+
+.invalid-feedback .errorlist {
+    list-style-type: none;
+    padding: 0;
+}
+
+.nav-item, .navbar-text {
+    font-size: 12pt;
+    padding-right: 0.25em;
+    padding-left: 0.25em;
+
+}
+
+/*.form-p input[type=text], .form-p input[type=email] {
+    width: 100%;
+    border-radius: 5px;
+    border: 1px solid lightskyblue;
+    padding: 7px;
+}*/
+
+#content {
+    padding: 10px;
+}
+
+#content h1 {
+    font-weight: 300;
+}
+
+table.word-wrap, table.word-wrap th, table.word-wrap td {
+    word-wrap: break-word;
+}
+
+.tours-header {
+    font-weight: bold;
+}
+
+.tours-riders {
+    width: 15em;
+    font-size: 12pt;
+    font-weight: bold;
+}
+
+.tours-rider a, .TSTourRow .riders a {
+    text-decoration-line: none;
+    color: inherit;
+}
+
+.tours-customer-name {
+    min-width: 15em;
+}
+
+.tours-customer-contact {
+    min-width: 10em;
+}
+
+.tours-pickup-location {
+    min-width: 15em;
+}
+
+.tours-notes {
+    width: 500px;
+}
+
+/* MESSAGES & ERRORS */
+
+ul.messagelist {
+    padding: 0;
+    margin: 0;
+}
+
+ul.messagelist li {
+    display: block;
+    font-weight: 400;
+    font-size: 13px;
+    padding: 10px 10px 10px 65px;
+    margin: 0 0 10px 0;
+    background: var(--message-success-bg) url(admin/img/icon-yes.svg) 40px 12px no-repeat;
+    background-size: 16px auto;
+    color: var(--body-fg);
+}
+
+ul.messagelist li.warning {
+    background: var(--message-warning-bg) url(admin/img/icon-alert.svg) 40px 14px no-repeat;
+    background-size: 14px auto;
+}
+
+ul.messagelist li.error {
+    background: var(--message-error-bg) url(admin/img/icon-no.svg) 40px 12px no-repeat;
+    background-size: 16px auto;
+}
+
+.RiderWidget {
+    border-radius: 5px;
+    border: 1px solid black;
+    background-color: rgb(255, 221, 221);
+    font-size: 12pt;
+    font-weight: bold;
+    padding: 5px;
+    display: inline-block;
+    cursor: pointer;
+}
+
+.TourRidersWidget .RiderWidget:last-child {
+    margin-bottom: 15px;
+}
+
+.tours-notes, .tours-riders {
+    padding: 0;
+}
+
+.tour-row td {
+    padding: 0 !important;
+}
+
+.TourRidersWidget {
+    /*padding: 5px;*/
+    height: 100%;
+}
+
+.tour-notes-widget:hover {
+    background-color: yellow;
+}
+
+.TourRidersWidget:hover {
+    background-color: rgb(255, 208, 208);
+}
+
+.TourRidersWidget .button-add {
+    float: right;
+    margin: 3px;
+}
+
+.acb-container {
+    display: block;
+    position: relative;
+}
+
+.acb-container input {
+    display: block;
+    min-width: 5em;
+    width: 100%;
+    padding: 3px;
+    border-radius: 5px;
+    height: 28px;
+    border: 2px solid lightskyblue;
+}
+
+.acb-container.selected input {
+    background-color:rgb(209, 255, 203);
+}
+
+.acb-results-list {
+    list-style-type: none;
+    padding: 1px;
+    margin: 0;
+    position: absolute;
+    min-width: 6em;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    z-index: 10;
+    top: 25px;
+    background-color: #fff;
+}
+
+.acb-results-item {
+    padding: 5px;
+}
+
+.acb-results-item:hover {
+    background-color: #bfb;
+}
+
+.tours-group-header {
+    background-color: lightsalmon;
+    /*font-size: 9pt;
+    font-weight: bold;*/
+}
+
+
+.TourSchedule > .Header {
+    font-size: 90%;
+}
+
+.TourSchedule {
+    --ts-scale: 1;
+    width: calc(100% * var(--ts-scale));
+    transform: scale(calc(1.0 / var(--ts-scale))); /* translate(-50%, -50%);*/
+    transform-origin: top left;
+    position: absolute;
+    padding-bottom: calc(10px * var(--ts-scale));
+}
+
+@media (max-width: 767.98px) {
+    .TourSchedule { --ts-scale: 1.5; }
+}
+
+@media (max-width: 575.98px) {
+    .TourSchedule { --ts-scale: 2; }
+}
+
+.TourScheduleGroup > .Header {
+    background-color: rgb(255, 196, 173);
+    font-weight: bold;
+    font-size: 120%;
+}
+
+.TourScheduleGroup > .Header .Value {
+    padding-top: 5px;
+}
+
+.TourScheduleEditor > .Header {
+    background-color: lime;
+    font-weight: bold;
+}
+
+.TSEGroupSelected {
+    box-shadow: 0 0 4px 4px yellow;
+    background-color: rgba(255, 255, 0,  0.3);
+}
+
+.TSEGroupSelected .Header {
+    background-color: yellow;
+}
+
+.TourScheduleRow > div > .row {
+    height: 100%; /* make the left-side columns take up the same height as the notes section */
+}
+
+.rider-list {
+    max-width: 10em;
+}
+
+.tour-schedule-edit-status {
+    max-width: 20em;
+}
+
+td.ToggleCell:not(.active) {
+    background-color: #ccc !important;
+}
+.ToggleCell:hover {
+    background-color: lightgreen;
+}
+.ToggleCell.active {
+    background-color: lime;
+}
+.ToggleCell.active:hover {
+    background-color: lightcoral;
+}
+
+.table > :not(:first-child) {
+    border-top: none !important;
+}
+
+.tours-header-riders {
+    height: 7em;
+}
+
+.tours-header-riders th {
+    position: relative;
+    width: 20px;
+    padding: 0 !important;
+}
+
+.tours-header-riders th div {
+    position: fixed;
+    display: block;
+    height: 7em;
+    margin-top: -7em;
+    padding: 3px 3px 3px 0;
+    writing-mode: vertical-rl;
+    font-size: 120%;
+    background-color: rgba(144, 238, 144, 0.836);
+    border: 1px solid rgba(204, 204, 204, 0.507);
+}
+
+.BikesWidget {
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 5px;
+}
+
+.BikesWidget span {
+    font-weight: bold;
+}
+.BikesWidget input {
+    float: right;
+    width: 4em !important;
+}
+
+.rider-tour-num {
+    min-width: 3em;
+}
+
+.rider-tour-name {
+    background-color: yellow;
+    text-align: center;
+}
+
+.rider-tour-row {
+    border-top: 1px solid black;
+}
+
+th.rider-tour-day {
+    background-color: lightpink !important;
+    min-width: 10em;
+}
+
+.TourPayConfigurator h4 {
+    border-bottom: 2px solid darkblue;
+    background-color: #eee;
+    padding: 5px 5px 5px 20px;
+}
+
+.TourPayConfigurator .hints {
+    font-weight: normal;
+    color: darkslategray;
+    margin-left: 5px;
+    margin: 0 0 3px 5px;
+    font-size: 90%;
+}
+
+.TourPayReport .hints {
+    font-weight: normal;
+    margin: 0;
+    font-size: 90%;
+}
+
+.TourTypeWidget {
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin: 5px;
+    text-align: right;
+}
+
+.TourTypeWidget input[type='number'] {
+    width: 5em;
+    margin-left: -5em;
+}
+
+.TourTypeWidget .label-for-input {
+    width: 100%;
+    margin-right: 5.5em;
+}
+
+.TourTypeWidget .config-row {
+    border-bottom: 1px solid #ccc;
+    padding: 5px;
+}
+
+.TourTypeWidget .config-row:last-of-type {
+    border-bottom: none;
+}
+
+.TourPayConfigurator .ConfigRows input {
+    width: 4em;
+}
+
+.rider-tour-date {
+    font-weight: bold;
+}
+
+.rider-tour-pay {
+    display: inline-block;
+}
+
+.rider-tour-pay, .rider-tour-total {
+    background-color: yellow;
+}
+
+.rider-tour-info {
+    font-weight: bold;
+}
+.ps-break .rider-tour-info {
+    font-weight: normal;
+}
+
+.rider-tour-times {
+    font-weight: bold;
+}
+
+.rider-tour-pay-info {
+    text-align: right;
+}
+
+.TourPayReport > .header {
+    font-weight: bold;
+    border-bottom: 1px solid lightgray;
+}
+
+.TourPayReport > .header div {
+    padding: 8px;
+}
+
+.TourPayReport .rider-tours-name {
+    background-color: yellow !important;
+    font-weight: bold;
+    padding: 8px;
+}
+
+.TourPayReport .rider-tours-tours {
+    padding: 0 !important;
+    background-color: coral;
+}
+
+.rider-tour-day, .rider-tour-day-empty {
+    background-color: coral;
+}
+
+.rider-tour-day {
+    padding: 8px;
+}
+
+.rider-tours-row:not(:last-of-type) {
+    border-bottom: 1px solid lightgray;
+}
+
+.RiderTourDay {
+    margin: 8px;
+}
+
+.RiderPaySlot {
+    font-size: 80%;
+}
+
+.RiderPaySlot.ps-break {
+    background-color: #eee;
+}
+
+.rider-tour-pay-info .FormattedInput input {
+    width: 4em;
+}
+
+.FocusedInput, .TourRidersWidget, .TourVenuesEditor {
+    border: 1px solid rgb(181, 227, 255);
+    border-radius: 3px;
+}
+
+.FocusedInput {
+    padding: 3px 5px;
+    width: 100%;
+    position: relative;
+}
+
+.FormattedInput textarea {
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: 10;
+    min-height: 22px;
+    position: absolute;
+}
+
+.TourScheduleEditor .EditableTextField, .TourScheduleEditor .FocusedInput, .TourScheduleEditor .FormattedInput {
+    height: 100%;
+}
+
+.EditableTextField .FocusedInput {
+    min-height: 100%;
+}
+
+.RiderTourDay .Header .FormattedInput {
+    width: auto;
+}
+
+.FormattedInput {
+    padding: 1px;
+    width: 100%;
+    min-height: 16px;
+    position: relative;
+    display: inline-block !important;
+}
+
+.FormattedInput span {
+    line-height: 16pt;
+}
+
+.FormattedInput.Editing .Prefix, .FormattedInput.Editing .Suffix {
+    width: 1.25em;
+}
+
+.FormattedInput input.Value {
+    width: calc(100% - 2.5em);
+    border: 1px solid rgb(104, 165, 214);
+}
+
+
+.FormattedInput textarea.Value {
+    overflow-y: auto;
+    max-height: 400px;
+}
+
+.FocusedInput .FormattedInput {
+    padding: 0;
+}
+
+.FocusedInput:hover {
+    background-color: rgb(255, 242, 185);
+}
+
+.FocusedInput.Editing {
+    border: none;
+}
+
+.EditableTextField.Changed, .BikesWidget.Changed {
+    background-color:rgb(247, 190, 255) !important;
+}
+
+.TourNotesWidget {
+    height: 100%;
+}
+
+.CalendarMonth {
+    padding: 5px;
+    cursor: default;
+}
+.CalendarMonth h4 {
+    padding-left: 5px;
+}
+
+.CalendarMonth.active > div {
+    background-color:rgb(193, 232, 255);
+    border-radius: 10px;
+    height: 100%;
+}
+
+.CalendarMonthHeader {
+    font-weight: bold;
+}
+
+.CalendarWeek {
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.CalendarWeek.active {
+    background-color: rgb(220, 241, 255);
+}
+
+/*.CalendarDay {
+    min-height: 50px;
+}*/
+
+.CalendarDay.inMonth.interactive,
+.CalendarWeek.interactive {
+    cursor: pointer;
+}
+
+.CalendarDay.inMonth.interactive:hover:not(.active),
+.CalendarWeek.interactive:hover:not(.active) {
+    background-color:rgb(235, 252, 254);
+}
+
+.CalendarDay:not(.inMonth) {
+    color: grey;
+}
+
+.CalendarDay.interactive.active, .CalendarWeek.interactive.active .CalendarDay.inMonth {
+    background-color: rgb(0, 99, 161);
+    color: white;
+    font-weight: bold;
+}
+
+.CalendarDay.inMonth.today:not(.interactive.active) {
+    background-color: rgba(200, 255, 119, 0.6);
+    color: black;
+    font-weight: bold;
+}
+
+.CalendarDay .date {
+    margin: 0 2px 0 4px;
+}
+
+.CalendarDay .Badges {
+    display: block;
+    margin-bottom: 2px;
+    min-height: 1.45em;
+}
+
+.CalendarDay .badge {
+    position: relative;
+    top: -1px;
+    margin: 0 2px;
+}
+
+.TourSummary .Header {
+    border-bottom: 1px solid #dee2e6;
+}
+
+.TourSummary .Header h3, .TourSummary .Header h5 {
+    display: inline-block;
+}
+
+.TourSummary .Header .btn {
+    position: relative;
+    top: -3px;
+}
+
+.TourSummaryTour {
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    overflow: hidden;
+    padding-bottom: 4px;
+}
+
+.TourSummaryDay {
+    padding-top: 5px;
+}
+
+.TourSummaryDay:not(:last-of-type) {
+    border-right: 1px solid #bcff57;
+}
+
+.TourSummaryTour:not(:last-of-type) {
+    border-bottom: 1px solid #dee2e6;
+    margin-bottom: 6px;
+}
+
+.TourSummaryTour div {
+    padding: 0 4px;
+}
+
+.TourSummaryTour .Type {
+    background-color: rgb(240, 255, 205);
+    padding: 4px;
+    font-weight: bold;
+}
+
+.TourScheduleRow .venue-presets {
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+}
+
+.TourScheduleRow .venues-clear {
+    position: absolute;
+    right: -20px;
+    top: 0px;
+    border-radius: 20px;
+}
+
+.TourVenue {
+    padding: 3px;
+    margin: 3px;
+}
+
+.TourVenue .title {
+    /*padding-left: 25px;*/
+    color: grey;
+}
+
+.TourVenuesEditor .TourVenue span[class^="bi-"] {
+    font-size: 20px;
+}
+
+.TourVenue:not(:last-of-type) {
+    border-right: 1px solid lightgreen;
+}
+
+button.btn[class*="bi-"] {
+    font-size: 1.25rem;
+    padding: .125rem .25rem;
+}
+
+.TourVenuesEditor {
+    border-bottom: 5px solid rgb(203, 213, 213);
+}
+
+ul.tips {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.tips li {
+    padding: 4px;
+    margin: 2px;
+    border-radius: 5px;
+    background-color: rgb(235, 252, 254);
+    float: left;
+}
+
+.Draggable:not(.dragging):not(.dragover):hover {
+    background-color: rgb(255, 242, 185);
+}
+
+.Draggable.dragging {
+    background-color: rgb(238, 210, 158);
+}
+
+.Draggable.dragover-left {
+    border-left: 4px solid rgb(32, 55, 138);
+}
+
+.Draggable.dragover-right {
+    border-right: 4px solid rgb(32, 55, 138);
+}
+
+.VenueWithBookings h4 {
+    text-decoration: underline;
+}
+
+.VenueWithBookings .time {
+    font-weight: bold;
+}
+
+.VenueWithBookings .pax {
+    background-color: yellow;
+}
+
+.VenueWithBookings {
+    background-color: rgb(244, 255, 218);
+}
+
+.row.seven-cols .col-1 {
+    width: 14.285714285714285714285714285714%;
+    *width: 14.285714285714285714285714285714%;
+}
+@media (min-width: 768px) {
+    .row-cols-md-7 > div.col {
+        flex: 0 0 auto;
+        width: calc(100%/7);
+    }
+}
+
+.text-highlight {
+    --bs-bg-opacity: 1;
+    background-color: rgba(255, 255, 0, var(--bs-bg-opacity));
+}
+
+.text-highlight-2 {
+    --bs-bg-opacity: 1;
+    background-color: rgba(0, 255, 255, var(--bs-bg-opacity))
+}
+
+.text-highlight-3 {
+    --bs-bg-opacity: 1;
+    background-color: rgba(0, 255, 0, var(--bs-bg-opacity));
+}
+
+.AvailableRider {
+    background-color: #eee;
+}
+.AvailableRider.active {
+    background-color:rgb(186, 255, 172);
+}
+.AvailableRider.active:hover {
+    background-color: rgb(120, 255, 93);
+}
+.AvailableRider.error {
+    background-color: rgb(255, 147, 65);
+}
+
+.TimeInput input {
+    width: 3em;
+    background-color:rgb(255, 255, 255);
+    border-radius: 5px;
+    border: 1px solid rgb(181, 227, 255);
+}
+
+.TimeInput {
+    background-color:rgb(235, 252, 254);
+    border-radius: 5px;
+    /*padding: 5px;*/
+    overflow: auto;
+}
+
+.RosterRider.dragover {
+    background-color: lime;
+    box-shadow: 0 0 1px 4px limegreen;
+}

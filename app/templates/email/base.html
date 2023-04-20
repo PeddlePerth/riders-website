@@ -1,0 +1,33 @@
+<style>
+#outer {
+    width: 100%;
+    text-align: center;
+}
+#inner {
+    display: inline-block;
+    max-width: 600px;
+    min-width: 100%;
+}
+#footer {
+    margin-top: 30px;
+    text-align: center;
+    color: #333;
+}
+{% block extrastyle %}{% endblock %}
+</style>
+<div id="outer">
+<div id="inner">
+    <div id="header">
+        <h3>{% block title %}Peddle Riders Login{% endblock title %}</h3>
+    </div>
+    <div id="content">
+        <p>Hi there <b>{{ name }}</b>,</p>
+        {% block content %}{% endblock %}
+    </div>
+    <div id="footer">
+        <p>Sent from <a href="{{ site_url }}">Peddle Perth Riders Website</a></p>
+        Peddle Perth Pty Ltd, ABN 30 636 155 729<br>
+        {% include 'peddle-logo-b64.html' %}
+    </div>
+</div>
+</div>

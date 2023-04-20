@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block page_content %}
+<div class="form-container">
+    <img src="{% static 'img/peddle-logo.png' %}" alt="Peddle logo">
+    <h1>Rider Profile</h1>
+</div>
+<div class="row g-3 justify-content-center">
+<form method="post" class="col-md-8 col-lg-6 col-xl-6 row g-3" novalidate>
+    {% csrf_token %}
+    
+    <div class="col-md-6">
+        {% with form.first_name as field %}{% include 'form_field.html' %}{% endwith %}
+    </div>
+    <div class="col-md-6">
+        {% with form.last_name as field %}{% include 'form_field.html' %}{% endwith %}
+    </div>
+
+    <div class="col-md-4">
+        {% with form.phone as field %}{% include 'form_field.html' %}{% endwith %}
+    </div>
+    <div class="col-md-8">
+        {% with form.email as field %}{% include 'form_field.html' %}{% endwith %}
+    </div>
+
+    <div class="col-md-5">
+        {% with form.abn as field %}{% include 'form_field.html' %}{% endwith %}
+        <div class="form-text mt-0">
+            Your Sole Trader ABN
+        </div>
+    </div>
+    <div class="col-md-7">
+        <div class="row g-3">
+            <div class="col-5">
+                {% with form.bank_bsb as field %}{% include 'form_field.html' %}{% endwith %}
+            </div>
+            <div class="col-7">
+                {% with form.bank_acct as field %}{% include 'form_field.html' %}{% endwith %}
+            </div>
+            <div class="form-text mt-0">
+                Bank Details for Tour Pay
+            </div>
+        </div>
+    </div>
+    
+    <div class="col text-end">
+        <input class="btn btn-primary my-3" type="submit" name="submit" value="Update Details">
+    </div>
+</form>
+</div>
+{% endblock %}

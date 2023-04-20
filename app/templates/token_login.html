@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Peddle Rider Login{% endblock %}
+
+{% block page_content %}
+
+<div class="form-container">
+    <img src="{% static 'img/peddle-logo.png' %}" alt="Peddle logo">
+    <h1>Rider Login</h1>
+    {% if request.user.is_authenticated %}
+    <p>
+        Already logged in as <b>{{ request.user.name }}</b> (<a href="{% url 'logout' %}">log out</a>).
+    </p>
+    <p>
+        Continue to log in as <b>{{ newuser.name }}</b> instead?
+    </p>
+    {% else %}
+    
+    <p>You will stay logged in forever on this device until you log out.</p>
+    <p><b>Save the link to this page if you need to log in using another device.</b></p>
+    {% endif %}
+
+    <form action="{% url 'accounts:token_login_submit' %}" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="userid" value="{{ newuser.id }}"/>
+        <input type="hidden" name="token" value="{{ token }}"/>
+        <input class="my-3 btn btn-primary" type="submit" name="submit" value="Login"/>
+    </form>
+</div>
+{% endblock %}
