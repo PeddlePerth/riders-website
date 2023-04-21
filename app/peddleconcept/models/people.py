@@ -1,7 +1,9 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
+from django.urls import reverse
 import string
+from datetime import timedelta
 
 from .base import MutableDataRecord
 
@@ -40,6 +42,12 @@ class Person(MutableDataRecord):
     override_pay_rate = models.PositiveIntegerField(null=True, blank=True,
         help_text='Override pay rate for specific rider - LEAVE BLANK unless you are sure!')
 
+    signup_status = models.CharField(max_length=20, choices=(
+        ('initial', 'Signed up - has not confirmed email'),
+        ('confirmed', 'Signed up - email confirmed'),
+        ('complete', 'Signed up - all details completed'),
+    ), default='initial')
+
     @property
     def name(self):
         fullname = ('%s %s' % (self.first_name, self.last_name)).strip()
@@ -47,6 +55,9 @@ class Person(MutableDataRecord):
 
     def __str__(self):
         return self.name
+
+    def can_login(self):
+        return self.active and self.signup_status == 'complete'
 
     #prefer_bike = models.ForeignKey('Bike', on_delete=models.SET_NULL, null=True, blank=True,
     #    help_text='Preferred bike for riders')
@@ -78,3 +89,8 @@ class PersonToken(models.Model):
     def login_url(self):
         if self.action == 'login':
             return reverse('token_login', args=[self.token])
+
+    def is_valid(self):
+        if self.valid_days == 0:
+            return True
+        return self.valid_from + timedelta(days=self.valid_days) < timezone.now()

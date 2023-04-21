@@ -373,6 +373,18 @@ class Migration(migrations.Migration):
                         verbose_name="Username for login (Optional)",
                     ),
                 ),
+                (
+                    "signup_status",
+                    models.CharField(
+                        choices=[
+                            ("initial", "Signed up - has not confirmed email"),
+                            ("confirmed", "Signed up - email confirmed"),
+                            ("complete", "Signed up - all details completed"),
+                        ],
+                        default="initial",
+                        max_length=20,
+                    )
+                )
             ],
             options={
                 "abstract": False,
@@ -394,7 +406,7 @@ class Migration(migrations.Migration):
                 (
                     "action",
                     models.CharField(
-                        choices=[("verify_email", "verify_email"), ("login", "login")],
+                        choices=[("auth_email", "auth_email"), ("login", "login")],
                         max_length=20,
                     ),
                 ),
@@ -416,6 +428,10 @@ class Migration(migrations.Migration):
                     ),
                 ),
             ],
+            options = {
+                "verbose_name": "Auth Token (Advanced)",
+                "verbose_name_plural": "Auth Tokens (Advanced)",
+            },
         ),
         migrations.CreateModel(
             name="Roster",
