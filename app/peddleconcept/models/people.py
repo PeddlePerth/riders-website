@@ -24,8 +24,9 @@ class Person(MutableDataRecord):
     phone = models.CharField(max_length=30, blank=True, verbose_name='Contact Phone Number')
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
-        verbose_name='Username for login (Optional)',
-        help_text="Allow this person to login directly with a username/password")
+        blank = True,
+        verbose_name = 'Username for login (Optional)',
+        help_text = "Allow this person to login directly with a username/password")
     
     active = models.BooleanField(blank=True)
     abn = models.CharField(max_length=30, blank=True, verbose_name='Contractor ABN')
@@ -51,7 +52,7 @@ class Person(MutableDataRecord):
     @property
     def name(self):
         fullname = ('%s %s' % (self.first_name, self.last_name)).strip()
-        return fullname or self.display_name or self.username or '(no name)'
+        return fullname or self.display_name or (self.user.username if self.user else None) or '(no name)'
 
     def __str__(self):
         return self.name

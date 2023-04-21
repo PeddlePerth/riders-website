@@ -16,11 +16,20 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from peddleconcept import views
+from peddleconcept.views import riders
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
     path('accounts/', include('django.contrib.auth.urls')),
+    path('accounts/login/code/<token>/', views.token_login_view_deprecated, name='token_login'),
+
+    path('rider/login/', riders.rider_login_view, name='rider_login'),
+    path('rider/login/verify/', riders.rider_login_verify_view, name='rider_login_verify'),
+
+    path('rider/setup/', riders.rider_setup_begin_view, name='rider_setup_begin'),
+    path('rider/setup/verify', riders.rider_setup_verify_view, name='rider_setup_verify'),
+    path('rider/setup/profile', riders.rider_setup_final_view, name='rider_setup_final'),
 
     path('', views.index_view, name='index'),
     path('profile/', views.homepage_view, name='home'),

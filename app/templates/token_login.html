@@ -21,7 +21,7 @@
     <p><b>Save the link to this page if you need to log in using another device.</b></p>
     {% endif %}
 
-    <form action="{% url 'accounts:token_login_submit' %}" method="post">
+    <form method="post">
         {% csrf_token %}
         <input type="hidden" name="userid" value="{{ newuser.id }}"/>
         <input type="hidden" name="token" value="{{ token }}"/>

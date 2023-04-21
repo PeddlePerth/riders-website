@@ -20,6 +20,7 @@ from .tours import (
 from .riders import (
     rider_list_view,
     homepage_view,
+    token_login_view_deprecated,
 )
 
 from .payroll import (

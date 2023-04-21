@@ -1,33 +1,51 @@
 <style>
+html, body {
+    padding: 0;
+    margin: 0;
+    background-color: #f0f0f0;
+}
 #outer {
     width: 100%;
     text-align: center;
+    background-color: #f0f0f0;
+    padding: 30px;
 }
 #inner {
     display: inline-block;
-    max-width: 600px;
-    min-width: 100%;
+    text-align: left;
+    min-width: 600px;
+    max-width: 100%;
+    border-radius: 30px;
+    padding: 10px 30px;
+    background-color: white;
+}
+#header {
+    font-size: 120%;
+    font-weight: bolder;
+    margin-bottom: 15px;
 }
 #footer {
-    margin-top: 30px;
-    text-align: center;
-    color: #333;
+    margin-top: 15px;
+    font-size: 80%;
+    color: #555;
 }
 {% block extrastyle %}{% endblock %}
 </style>
 <div id="outer">
 <div id="inner">
     <div id="header">
-        <h3>{% block title %}Peddle Riders Login{% endblock title %}</h3>
+        <p>{% block title %}Peddle Riders Login{% endblock title %}</p>
     </div>
     <div id="content">
         <p>Hi there <b>{{ name }}</b>,</p>
         {% block content %}{% endblock %}
+    
+
     </div>
     <div id="footer">
         <p>Sent from <a href="{{ site_url }}">Peddle Perth Riders Website</a></p>
         Peddle Perth Pty Ltd, ABN 30 636 155 729<br>
-        {% include 'peddle-logo-b64.html' %}
+        {% include 'email/peddle-logo-b64.html' %}
     </div>
 </div>
 </div>

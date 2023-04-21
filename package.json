@@ -13,7 +13,7 @@
     "killdb": "docker stop postgres-dev; docker rm -v postgres-dev; rm -rf psql-data",
     "psql": "docker exec -it postgres-dev psql -h localhost -U postgres",
     "server": ". ./pyenv/bin/activate; app/manage.py runserver",
-    "setupvenv": "python3 -m virtualenv pyenv; echo 'export DJANGO_SECRET_KEY=notverysecret DB_HOST=localhost DB_PASS=password DB_USER=postgres DB_NAME=${npm_package_name}_dev EMAIL_HOST= EMAIL_USER= EMAIL_PASS=' >> pyenv/bin/activate; . ./pyenv/bin/activate; pip install -r requirements.txt",
+    "setupvenv": "python3 -m virtualenv pyenv; echo 'export DJANGO_SECRET_KEY=notverysecret DB_HOST=localhost DB_PASS=password DB_USER=postgres DB_NAME=peddleweb_dev EMAIL_HOST= EMAIL_USER= EMAIL_PASS=' >> pyenv/bin/activate; . ./pyenv/bin/activate; pip install -r requirements.txt",
     "activate": ". ./pyenv/bin/activate; echo '(activated)'; $SHELL; echo '(deactivated)'",
     "getlatestdata": "archive=$(ls -t1 ../../frekky-aws-deploy/backups/peddleweb_data* | head -n1); name=$(basename $archive | sed 's/\\.tar\\.xz//g'); tar xvf $archive; docker exec -i postgres-dev psql -h localhost -U postgres peddleweb_dev < $name/postgres_peddleweb.sql; echo $name;",
     "push": "../../frekky-aws-deploy/publish.sh peddleweb"

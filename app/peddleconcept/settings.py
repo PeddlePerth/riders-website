@@ -146,7 +146,7 @@ def get_deputy_api_setting():
 def get_deputy_defaults_setting():
     return get_setting_or_default(DEPUTY_DEFAULTS_SETTING, {
         'company_id': 1234,
-        'rider_employee_role_id': 1234,
+        'employee_role_id': 1234,
     })
 
 def get_setting(setting_name):

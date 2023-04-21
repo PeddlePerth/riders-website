@@ -2,6 +2,7 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
 from smtplib import SMTPException
+import random
 
 from .models import PersonToken
 import logging
@@ -23,6 +24,7 @@ def send_account_auth_email(person):
     tokens.delete()
 
     token = PersonToken(person=person, action='auth_email', token=get_random_code(AUTH_TOKEN_LENGTH), valid_days=AUTH_TOKEN_VALID_DAYS)
+    token.save()
 
     ctx = {
         'name': person.name,
@@ -33,11 +35,12 @@ def send_account_auth_email(person):
         ok = send_mail(
             'Your Peddle Riders Code is: %s' % token.token,
             render_to_string('email/email_auth.txt', ctx),
-            getattr(settings, 'FROM_EMAIL'),
-            person.email,
+            getattr(settings, 'EMAIL_FROM'),
+            [person.email],
             html_message = render_to_string('email/email_auth.html', ctx),
         )
-    except SMTPException:
+    except SMTPException as e:
+        logger.error('Error sending email: %s: %s' % (type(e), e))
         ok = False
     
     return bool(ok)

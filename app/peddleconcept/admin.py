@@ -107,7 +107,7 @@ class PersonAdmin(MyModelAdmin):
 @admin.register(PersonToken)
 class PersonTokenAdmin(MyModelAdmin):
     list_display = (
-        'person', 'action', 'valid_from', 'valid_days'
+        'person', 'action', 'valid_from', 'valid_days', 'full_login_url'
     )
     ordering = ['person__first_name']
     list_filter = ('valid_days', 'action')
