@@ -8,7 +8,7 @@ def get_person(request):
     person_id = request.session.get('person_id')
     if person_id is not None:
         try:
-            return Person.objects.get(id=person_id)
+            return Person.objects.get(id=person_id, active__exact=True)
         except Person.DoesNotExist:
             pass
 

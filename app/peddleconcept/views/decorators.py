@@ -16,37 +16,44 @@ def get_rider_setup_redirect(request):
     else:
         # Anything else: redirect to login
         pass
-    return HttpResponseRedirect(reverse('accounts:login'))
+    return HttpResponseRedirect(reverse('login'))
 
 
 def staff_required(user):
     return user.is_authenticated and user.is_staff
 
-def require_person_or_user(view_func, user=False, admin=False):
-    @wraps(view_func)
-    def wrapper(request, *args, **kwargs):
-        if admin and not request.user.is_authenticated and request.user.is_staff:
-            messages.error(request, "You don't have access to that page")
-            return HttpResponseRedirect(reverse('home'))
+def require_person_or_user(person=False, user=False, admin=False):
+    """ Decorator function for views which require a Person (request.person), User or Admin """
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            if admin and not request.user.is_authenticated and request.user.is_staff:
+                messages.error(request, "You don't have access to that page")
+                return HttpResponseRedirect(reverse('my_profile'))
 
-        if user and not request.user.is_authenticated:
-            return HttpResponseRedirect(reverse('accounts:login'))
+            if user and not request.user.is_authenticated:
+                return HttpResponseRedirect(reverse('login'))
 
-        if not request.user and request.person is not None:
-            if not request.person.can_login():
-                return get_rider_setup_redirect(request)
-        elif not request.user and request.person is None:
-            return HttpResponseRedirect(reverse('accounts:login'))
+            if not request.user and request.person is not None:
+                if not request.person.can_login():
+                    return get_rider_setup_redirect(request)
+            elif not request.user and request.person is None:
+                return HttpResponseRedirect(reverse('login'))
 
-        return view_func(request, *args, **kwargs)
-    return wrapper
+            if person and request.person is None:
+                messages.error(request, 'You do not have a profile associated with this account. Ask an admin to add a Person for you.')
+                return HttpResponseRedirect(reverse('index'))
+
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
 
 def require_null_person(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         if (request.person and request.person.can_login()) or request.user.is_authenticated:
             messages.info(request, "Already logged in!")
-            return HttpResponseRedirect(reverse('home'))
+            return HttpResponseRedirect(reverse('my_profile'))
         elif request.person:
             return get_rider_setup_redirect(request)
         

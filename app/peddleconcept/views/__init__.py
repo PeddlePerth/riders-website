@@ -19,11 +19,18 @@ from .tours import (
 
 from .riders import (
     rider_list_view,
-    homepage_view,
-    token_login_view_deprecated,
+    my_profile_view,
 )
 
 from .payroll import (
     tour_pays_view,
     tour_pays_data_view,
+)
+
+from .auth import (
+    rider_login_view,
+    rider_login_verify_view,
+    token_login_view_deprecated,
+    MyLoginView,
+    MyLogoutView,
 )

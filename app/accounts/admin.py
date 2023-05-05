@@ -9,11 +9,6 @@ from .forms import PeddlerCreationForm, PeddlerChangeForm
 from .models import PeddleUser
 from peddleconcept.actions import download_as_csv
 
-
-class ReadOnlyAdmin:
-    def has_add_permission(self, request):
-        return False
-
 @admin.register(PeddleUser)
 class PeddleUserAdmin(UserAdmin):
     add_form = PeddlerCreationForm

@@ -14,25 +14,36 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+from django.contrib.auth import views as auth_views
 from django.urls import path, include
 from peddleconcept import views
 from peddleconcept.views import riders
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('accounts/', include('accounts.urls')),
-    path('accounts/', include('django.contrib.auth.urls')),
+    
+    path('accounts/login/', views.MyLoginView.as_view(), name='login'),
+    path('accounts/logout/', views.MyLogoutView.as_view(), name='logout'),
+    # Password change - only usable if request.user.is_authenticated
+    path('accounts/password_change/', auth_views.PasswordChangeView.as_view(), name='password_change'),
+    path('accounts/password_change/done/', auth_views.PasswordChangeDoneView.as_view(), name='password_change_done'),
+    # Don't allow password resets in general - confusing for riders (without linked user account) vs admins
+    #path("accounts/password_reset/", views.PasswordResetView.as_view(), name="password_reset"),
+    #path("accounts/password_reset/done/", auth_views.PasswordResetDoneView.as_view(), name="password_reset_done"),
+    #path("accounts/reset/<uidb64>/<token>/", auth_views.PasswordResetConfirmView.as_view(), name="password_reset_confirm"),
+    #path("accounts/reset/done/", auth_views.PasswordResetCompleteView.as_view(), name="password_reset_complete"),
+
     path('accounts/login/code/<token>/', views.token_login_view_deprecated, name='token_login'),
 
-    path('rider/login/', riders.rider_login_view, name='rider_login'),
-    path('rider/login/verify/', riders.rider_login_verify_view, name='rider_login_verify'),
+    path('rider/login/', views.rider_login_view, name='rider_login'),
+    path('rider/login/verify/', views.rider_login_verify_view, name='rider_login_verify'),
 
     path('rider/setup/', riders.rider_setup_begin_view, name='rider_setup_begin'),
     path('rider/setup/verify', riders.rider_setup_verify_view, name='rider_setup_verify'),
     path('rider/setup/profile', riders.rider_setup_final_view, name='rider_setup_final'),
 
     path('', views.index_view, name='index'),
-    path('profile/', views.homepage_view, name='home'),
+    path('profile/', views.my_profile_view, name='my_profile'),
     path('contacts/', views.rider_list_view, name='rider_list'),
     path('tours/', views.schedules_view),
     path('tours/schedule/', views.schedules_view, name='tours_today'),

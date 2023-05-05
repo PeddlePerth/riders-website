@@ -3,11 +3,11 @@ from django.urls import reverse
 from django.shortcuts import render
 from django.utils.safestring import mark_safe
 from django.conf import settings
-from django.contrib.auth.decorators import login_required
+from .decorators import require_person_or_user
 
 import json
 
-@login_required
+@require_person_or_user()
 def index_view(request):
     if request.user.is_staff:
         return HttpResponseRedirect(reverse('tour_dashboard'))

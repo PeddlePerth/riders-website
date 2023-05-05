@@ -94,4 +94,4 @@ class PersonToken(models.Model):
     def is_valid(self):
         if self.valid_days == 0:
             return True
-        return self.valid_from + timedelta(days=self.valid_days) < timezone.now()
+        return self.valid_from + timedelta(days=self.valid_days) > timezone.now()

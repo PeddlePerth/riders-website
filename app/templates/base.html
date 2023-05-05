@@ -58,17 +58,22 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNavDropdown">
-                    {% if request.user.is_authenticated %}
+                    {% if request.user.is_authenticated or request.person %}
                     <span class="navbar-text">
-                        Welcome, {{ request.user.first_name }}
+                        Welcome, {% if request.user.is_authenticated %}{{ request.user.first_name }}{% else %}{{ request.person.name }}{% endif %}
+                        {% if request.user.is_authenticated %}<span class="badge bg-success mx-1">User</span>{% endif %}
+                        {% if request.user.is_staff %}<span class="badge bg-primary me-1">Admin</span>{% endif %}
+                        {% if request.person.is_core_rider %}<span class="badge bg-danger">Core Rider</span>
+                        {% elif request.person.rider_class %}<span class="badge bg-success">Rider</span>
+                        {% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}
                     </span>
                     {% endif %}
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                        {% if request.user.is_authenticated %}
+                        {% if request.user.is_authenticated or request.person %}
                         <li class="nav-item">
-                            <a class="nav-link active" href="{% url 'home' %}">Profile</a>
+                            <a class="nav-link active" href="{% url 'my_profile' %}">Profile</a>
                         </li>
-                        {% if user.is_rider %}
+                        {% if request.person.rider_class %}
                         <li class="nav-item">
                             <a class="nav-link active" href="{% url 'tours_rider_today' %}">My Tours</a>
                         </li>
@@ -79,7 +84,6 @@
                         <li class="nav-item">
                             <a class="nav-link active" href="{% url 'rider_list' %}">Rider Contacts</a>
                         </li>
-
                         <li class="nav-item">
                             <a class="nav-link active" href="{% url 'logout' %}">Logout</a>
                         </li>
@@ -116,7 +120,7 @@
                             <a class="nav-link active" href="{% url 'admin:index' %}">Admin Site</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link active" href="{% url 'admin:password_change' %}">{% translate 'Change password' %}</a>
+                            <a class="nav-link active" href="{% url 'password_change' %}">{% translate 'Change password' %}</a>
                         </li>
                     </ul>
                 </div>

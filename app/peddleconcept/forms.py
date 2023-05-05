@@ -12,7 +12,7 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 AUTH_TOKEN_LENGTH = getattr(settings, 'AUTH_TOKEN_LENGTH', 6)
-MOBILE_PHONE_REGEX = re.compile(r'^(\+614|04|00614)\d{9}$')
+MOBILE_PHONE_REGEX = re.compile(r'^(\+614|04|00614)\d{8}$')
 BSB_REGEX = re.compile(r'^\d{3}-?\d{3}$')
 BANK_ACCT_REGEX = re.compile(r'^\d{4,20}$')
 
@@ -29,14 +29,17 @@ class ProfileForm(forms.ModelForm):
     bank_bsb = forms.CharField(required=True, max_length=10, label='BSB')
     bank_acct = forms.CharField(required=True, max_length=20, label='Account Number')
 
-def get_form_fields(form, with_valid=False):
+def get_form_fields(form):
     form_fields = {}
     for f in form:
-        f.html = f.as_widget(attrs={
-            'class': 'form-control' + (
-                ((' is-invalid' if f.errors else ' is-valid') if f.value else '') if with_valid else ''),
-        })
-        form_fields[f.name] = f
+        errors = form.errors.get(f.name)
+        form_fields[f.name] = {
+            'field': f,
+            'html': f.as_widget(attrs={
+                'class': 'form-control' + (' is-invalid' if errors else ''),
+            }),
+            'errors': errors,
+        }
     return form_fields
 
 class PersonFormMixin:
@@ -48,7 +51,7 @@ class PersonFormMixin:
 
     def clean_email(self):
         data = self.cleaned_data.get('email', '').strip()
-        if Person.objects.filter(Q(email=data) & self.get_instance_filter().count() > 0):
+        if Person.objects.filter(Q(email=data) & self.get_instance_filter()).count() > 0:
             raise ValidationError('Email address already in use')
         return data
 
@@ -62,7 +65,7 @@ class PersonFormMixin:
     
     def clean_display_name(self):
         data = self.cleaned_data.get('display_name', '').strip()
-        if Person.objects.filter(Q(display_name=data) & self.get_instance_filter().count() > 0):
+        if Person.objects.filter(Q(display_name=data) & self.get_instance_filter()).count() > 0:
             raise ValidationError('Display name already in use, please choose another one')
         return data
 

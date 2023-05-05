@@ -4,7 +4,6 @@ from datetime import timedelta, date
 from django.utils import timezone
 from django.urls import reverse
 from django.http import HttpResponseBadRequest, JsonResponse
-from django.contrib.auth.decorators import user_passes_test
 from django.views.decorators.http import require_http_methods
 
 from peddleconcept.util import (
@@ -14,7 +13,7 @@ from peddleconcept.pay_reports import (
     save_tour_pay_config, update_payslots, load_tour_pay_report
 )
 from .base import render_base
-from .decorators import staff_required
+from .decorators import require_person_or_user
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +41,7 @@ def get_weekly_urls(tours_date):
 
 
 
-@user_passes_test(staff_required)
+@require_person_or_user(admin=True)
 def tour_pays_view(request, year_num=None, week_num=None, week_start=None):
     """ HTML view for Weekly Tour Pays """
     now = timezone.now().date()
@@ -73,7 +72,7 @@ def tour_pays_view(request, year_num=None, week_num=None, week_start=None):
 
     return render_base(request, 'report_tours', react=True, context=ctx, jsvars=jsvars)
 
-@user_passes_test(staff_required)
+@require_person_or_user(admin=True)
 @require_http_methods(['POST'])
 def tour_pays_data_view(request):
     """ JSON data view for TourPayReport (Weekly Tour Pays) """
