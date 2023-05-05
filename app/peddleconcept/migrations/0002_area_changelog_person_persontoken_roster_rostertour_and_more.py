@@ -24,15 +24,20 @@ def make_riders_people(apps, schema_editor):
     user_id_to_person = {}
     users_to_delete = []
 
-    riders = PeddleUser.objects.using(db_alias).filter(is_rider=True)
-    for user in riders:
-        rider_class = 'rider_standard'
-        if user.rider_pay_rate == 25:
-            rider_class = 'rider_probationary'
-        elif user.rider_pay_rate == 33:
-            rider_class = 'rider_senior'
-        elif user.rider_pay_rate == 36:
-            rider_class = 'rider_professional'
+    users = PeddleUser.objects.using(db_alias)
+    for user in users:
+
+        if user.is_rider:
+            rider_class = 'rider_standard'
+            if user.rider_pay_rate == 25:
+                rider_class = 'rider_probationary'
+            elif user.rider_pay_rate == 33:
+                rider_class = 'rider_senior'
+            elif user.rider_pay_rate == 36:
+                rider_class = 'rider_professional'
+        else:
+            rider_class = None
+            
         person = Person(
             first_name = user.first_name,
             last_name = user.last_name,
@@ -48,13 +53,14 @@ def make_riders_people(apps, schema_editor):
             email_verified = False,
             rider_class = rider_class,
         )
-        if is_password_usable(user.password) and user.username:
+
+        if is_password_usable(user.password) and user.username and user.is_active:
             person.user = user
         else:
             users_to_delete.append(user)
 
         person.save(using=db_alias)
-        if user.login_token:
+        if user.login_token and not is_password_usable(user.password):
             PersonToken(
                 person = person,
                 action = 'login',
@@ -73,19 +79,18 @@ def make_riders_people(apps, schema_editor):
         tr.save()
 
     for u in users_to_delete:
-        print('will delete user:', u.display_name)
         rider_users_to_delete.append(u.id)
-    #print('users to delete: [' + ', '.join((str(u.id) for u in users_to_delete)) + ']')
-    #for u in users_to_delete:
-    #    u.delete()
+
+    print('will delete users:', ', '.join((u.display_name for u in users_to_delete)))
+    print('created Person objects:', ', '.join((p.name for p in Person.objects.using(db_alias).all())))
 
 def delete_rider_users(apps, schema_editor):
     global rider_users_to_delete
     PeddleUser = apps.get_model('accounts', 'PeddleUser')
     db_alias = schema_editor.connection.alias
 
-    print('deleting users:', rider_users_to_delete)
     PeddleUser.objects.using(db_alias).filter(id__in=rider_users_to_delete).delete()
+    print('remaining Users:', ', '.join((u.username for u in PeddleUser.objects.using(db_alias).all())))
 
 class Migration(migrations.Migration):
 
