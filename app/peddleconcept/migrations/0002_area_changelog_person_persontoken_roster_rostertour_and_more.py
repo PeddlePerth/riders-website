@@ -6,6 +6,7 @@ from django.db import migrations, models
 import django.db.models.deletion
 import django.utils.timezone
 import peddleconcept.models.people
+import re
 
 from django.contrib.auth.hashers import is_password_usable
 
@@ -41,9 +42,9 @@ def make_riders_people(apps, schema_editor):
         person = Person(
             first_name = user.first_name,
             last_name = user.last_name,
-            display_name = user.display_name,
-            email = user.email or '',
-            phone = user.phone or '',
+            display_name = user.display_name or '%s %s' % (user.first_name, user.last_name),
+            email = user.email or None,
+            phone = user.phone or None,
             last_seen = user.last_login,
             active = user.is_active,
             abn = user.abn or '',
@@ -52,6 +53,7 @@ def make_riders_people(apps, schema_editor):
             override_pay_rate = user.rider_pay_rate,
             email_verified = False,
             rider_class = rider_class,
+            signup_status = 'migrated',
         )
 
         if is_password_usable(user.password) and user.username and user.is_active:
@@ -63,7 +65,7 @@ def make_riders_people(apps, schema_editor):
         if user.login_token and not is_password_usable(user.password):
             PersonToken(
                 person = person,
-                action = 'login',
+                action = 'rider_login_migrated',
                 valid_days = 0, # forever
                 token = user.login_token,
             ).save(using=db_alias)
@@ -81,8 +83,8 @@ def make_riders_people(apps, schema_editor):
     for u in users_to_delete:
         rider_users_to_delete.append(u.id)
 
-    print('will delete users:', ', '.join((u.display_name for u in users_to_delete)))
-    print('created Person objects:', ', '.join((p.name for p in Person.objects.using(db_alias).all())))
+    print('\nwill delete users:', ', '.join((u.display_name for u in users_to_delete)))
+    print('\ncreated Person objects:', ', '.join((p.display_name for p in Person.objects.using(db_alias).all())))
 
 def delete_rider_users(apps, schema_editor):
     global rider_users_to_delete
@@ -90,7 +92,7 @@ def delete_rider_users(apps, schema_editor):
     db_alias = schema_editor.connection.alias
 
     PeddleUser.objects.using(db_alias).filter(id__in=rider_users_to_delete).delete()
-    print('remaining Users:', ', '.join((u.username for u in PeddleUser.objects.using(db_alias).all())))
+    print('\nremaining Users:', ', '.join((u.username for u in PeddleUser.objects.using(db_alias).all())))
 
 class Migration(migrations.Migration):
 
@@ -310,50 +312,115 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("updated", models.DateTimeField(auto_now=True)),
-                ("created", models.DateTimeField(auto_now_add=True)),
+                (
+                    "created", 
+                    models.DateTimeField(
+                        default=django.utils.timezone.now, verbose_name="Date joined"
+                    ),
+                ),
                 ("first_name", models.CharField(max_length=200)),
                 ("last_name", models.CharField(max_length=200)),
                 (
                     "display_name",
-                    models.CharField(max_length=200, verbose_name="Preferred Name"),
+                    models.CharField(
+                        error_messages={
+                            "blank": "Display name cannot be blank",
+                            "unique": "Display name already taken",
+                        },
+                        max_length=200,
+                        null=True,
+                        unique=True,
+                        verbose_name="Preferred Name",
+                    ),
                 ),
-                ("email", models.EmailField(max_length=254)),
-                ("email_verified", models.BooleanField(blank=True)),
+                (
+                    "email", 
+                    models.EmailField(
+                        error_messages={
+                            "blank": "You must enter an email address",
+                            "unique": "Email address already in use",
+                        },
+                        max_length=254,
+                        null=True,
+                        unique=True,
+                    ),
+                ),
+                ("email_verified", models.BooleanField(blank=True, default=False)),
                 (
                     "phone",
                     models.CharField(
-                        blank=True, max_length=30, verbose_name="Contact Phone Number"
+                        error_messages={
+                            "blank": "You must enter a phone number",
+                            "unique": "Phone number already taken",
+                        },
+                        max_length=30,
+                        null=True,
+                        unique=True,
+                        validators=[
+                            django.core.validators.RegexValidator(
+                                re.compile("^(\\+614|04|00614)\\d{8}$"),
+                                message="Please provide a valid Australian mobile phone number",
+                            )
+                        ],
+                        verbose_name="Contact Phone Number",
                     ),
                 ),
                 ("active", models.BooleanField(blank=True)),
                 (
                     "abn",
                     models.CharField(
-                        blank=True, max_length=30, verbose_name="Contractor ABN"
+                        blank=True,
+                        max_length=30,
+                        validators=[peddleconcept.models.people.validate_abn],
+                        verbose_name="Contractor ABN",
                     ),
                 ),
                 (
                     "bank_bsb",
                     models.CharField(
-                        blank=True, max_length=20, verbose_name="Bank account BSB"
+                        blank=True,
+                        max_length=20,
+                        validators=[
+                            django.core.validators.RegexValidator(
+                                re.compile("^\\d{3}-?\\d{3}$"),
+                                message="BSB must be exactly 6 digits",
+                            )
+                        ],
+                        verbose_name="Bank account BSB",
                     ),
                 ),
                 (
                     "bank_acct",
                     models.CharField(
-                        blank=True, max_length=20, verbose_name="Bank account number"
+                        blank=True,
+                        max_length=20,
+                        validators=[
+                            django.core.validators.RegexValidator(
+                                re.compile("^\\d{4,20}$"),
+                                message="Must be a number between 4 and 20 digits",
+                            )
+                        ],
+                        verbose_name="Bank account number",
                     ),
                 ),
-                ("last_seen", models.DateTimeField(blank=True, null=True)),
+                (
+                    "last_seen", 
+                    models.DateTimeField(
+                        blank=True,
+                        default=django.utils.timezone.now,
+                        null=True,
+                        verbose_name="Last activity",
+                    ),
+                ),
                 (
                     "rider_class",
                     models.CharField(
                         blank=True,
                         choices=[
-                            ("rider_probationary", "rider_probationary"),
-                            ("rider_standard", "rider_standard"),
-                            ("rider_senior", "rider_senior"),
-                            ("rider_professional", "rider_professional"),
+                            ("rider_probationary", "Probationary Rider (noob)"),
+                            ("rider_standard", "Standard Rider"),
+                            ("rider_senior", "Senior Rider"),
+                            ("rider_professional", "Pro Rider"),
                         ],
                         max_length=20,
                         null=True,
@@ -371,6 +438,7 @@ class Migration(migrations.Migration):
                 (
                     "user",
                     models.ForeignKey(
+                        blank=True,
                         help_text="Allow this person to login directly with a username/password",
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
@@ -382,13 +450,13 @@ class Migration(migrations.Migration):
                     "signup_status",
                     models.CharField(
                         choices=[
-                            ("initial", "Signed up - has not confirmed email"),
+                            ("migrated", "Migrated account - verification needed"),
                             ("confirmed", "Signed up - email confirmed"),
                             ("complete", "Signed up - all details completed"),
                         ],
-                        default="initial",
+                        default="migrated",
                         max_length=20,
-                    )
+                    ),
                 )
             ],
             options={
@@ -411,8 +479,11 @@ class Migration(migrations.Migration):
                 (
                     "action",
                     models.CharField(
-                        choices=[("auth_email", "auth_email"), ("login", "login")],
-                        max_length=20,
+                        choices=[
+                            ("rider_invite_generic", "Rider signup invitation URL"),
+                            ("rider_login_migrated", "Migrated rider login URL"),
+                        ],
+                        max_length=30,
                     ),
                 ),
                 ("token", models.CharField(max_length=80, default=peddleconcept.models.people.get_random_token)),
@@ -422,20 +493,21 @@ class Migration(migrations.Migration):
                     models.PositiveIntegerField(
                         blank=True,
                         default=0,
-                        verbose_name="Number of days token is valid",
+                        verbose_name="Number of days token is valid (0 = forever)",
                     ),
                 ),
                 (
                     "person",
                     models.ForeignKey(
+                        null=True,
                         on_delete=django.db.models.deletion.CASCADE,
                         to="peddleconcept.person",
                     ),
                 ),
             ],
             options = {
-                "verbose_name": "Auth Token (Advanced)",
-                "verbose_name_plural": "Auth Tokens (Advanced)",
+                "verbose_name": "Magic Token (Advanced)",
+                "verbose_name_plural": "Magic Tokens (Advanced)",
             },
         ),
         migrations.CreateModel(

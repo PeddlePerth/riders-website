@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Peddle account setup{% endblock %}
+
+{% block page_content %}
+<div class="form-container">
+    <img src="{% static 'img/peddle-logo.png' %}" alt="Peddle logo">
+</div>
+<div class="row g-3 justify-content-center">
+<form method="post" class="col-md-8 col-lg-6 col-xl-6 row g-3" novalidate>
+    <h1>Complete your profile</h1>
+    <p>Please have your Sole Trader ABN and bank account details handy. These will not be shared without your permission.</p>
+
+    {% csrf_token %}
+    {% if form_errors %}<div class="invalid-feedback">{{ form_errors }}</div>{% endif %}
+    
+    <div class="col-12">
+        {% with form.display_name as field %}{% include 'form_field.html' %}{% endwith %}
+    </div>
+
+    <div class="col-12">
+        {% with form.phone as field %}{% include 'form_field.html' %}{% endwith %}
+    </div>
+
+    <div class="col-12 col-md-6">
+        {% with form.abn as field %}{% include 'form_field.html' %}{% endwith %}
+    </div>
+    <div class="w-100 d-none d-md-block"></div>
+
+    <div class="col-md-6 col-8">
+        {% with form.bank_bsb as field %}{% include 'form_field.html' %}{% endwith %}
+    </div>
+    <div class="col-md-6 col-12">
+        {% with form.bank_acct as field %}{% include 'form_field.html' %}{% endwith %}
+    </div>
+
+    <div class="col text-end">
+        <input class="btn btn-primary my-3" type="submit" name="submit" value="Save & finish">
+    </div>
+</form>
+</div>
+{% endblock %}

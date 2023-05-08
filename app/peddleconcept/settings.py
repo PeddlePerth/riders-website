@@ -34,6 +34,8 @@ AVAILABILITY_DEFAULT_WEEK_SETTING = 'availability_week_default'
 DEPUTY_API_SETTING = 'deputy_api'
 DEPUTY_DEFAULTS_SETTING = 'deputy_defaults'
 
+RIDER_PAYRATE_SETTING = 'rider_pay_rates'
+
 def get_setting_or_default(setting_name, default):
     try:
         s = Settings.objects.get(name=setting_name)
@@ -140,13 +142,21 @@ def get_auto_update_setting():
 def get_deputy_api_setting():
     return get_setting_or_default(DEPUTY_API_SETTING, {
         'endpoint_url': 'https://{install}.{geo}.deputy.com',
-        'auth_token': 'abcd1234',
+        'auth_token': '',
     })
 
 def get_deputy_defaults_setting():
     return get_setting_or_default(DEPUTY_DEFAULTS_SETTING, {
         'company_id': 1234,
         'employee_role_id': 1234,
+    })
+
+def get_rider_payrate_setting():
+    return get_setting_or_default(RIDER_PAYRATE_SETTING, {
+        'rider_probationary': 25,
+        'rider_standard': 30,
+        'rider_senior': 33,
+        'rider_professional': 36,
     })
 
 def get_setting(setting_name):

@@ -107,9 +107,9 @@ class PersonAdmin(MyModelAdmin):
 @admin.register(PersonToken)
 class PersonTokenAdmin(MyModelAdmin):
     list_display = (
-        'person', 'action', 'valid_from', 'valid_days', 'full_login_url'
+        'person', 'action', 'valid_from', 'full_url'
     )
-    ordering = ['person__first_name']
-    list_filter = ('valid_days', 'action')
+    ordering = ['action', 'person__first_name']
+    list_filter = ('valid_days', 'action', 'person__active')
     exclude = ['token']
-    readonly_fields = ['person', 'action']
+    readonly_fields = ['person']

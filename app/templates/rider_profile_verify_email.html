@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Verify your email{% endblock %}
+
+{% block page_content %}
+
+<div class="form-container">
+    <img src="{% static 'img/peddle-logo.png' %}" alt="Peddle logo">
+    <h1>Verify your new email</h1>
+
+    <p>
+        You should receive a 6-digit code in your inbox. 
+        Please check your junk mail or re-send the code if needed - emails may take a few minutes to arrive.
+    </p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        <p>Old email address: {{ email_old }}</p>
+        <p><b>New email address:</b> {{ email_new }}</p>
+        {% with form.auth_code as field %}{% include 'form_field.html' %}{% endwith %}
+        <input class="my-3 btn btn-primary" type="submit" name="verify" value="Verify & Save" tabindex="0"/>
+        <input class="my-3 btn btn-secondary me-1" type="submit" name="resend" value="Re-send Code" tabindex="1"/>
+    </form>
+</div>
+{% endblock %}

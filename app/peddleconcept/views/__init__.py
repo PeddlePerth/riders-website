@@ -19,7 +19,15 @@ from .tours import (
 
 from .riders import (
     rider_list_view,
-    my_profile_view,
+    rider_profile_edit_view,
+    rider_profile_edit_payroll_view,
+    rider_setup_invite_view,
+    rider_setup_begin_view,
+    rider_setup_verify_view,
+    rider_setup_final_view,
+    rider_token_login_migrate_view,
+    rider_migrate_begin_view,
+    rider_migrate_verify_view,
 )
 
 from .payroll import (
@@ -30,7 +38,6 @@ from .payroll import (
 from .auth import (
     rider_login_view,
     rider_login_verify_view,
-    token_login_view_deprecated,
     MyLoginView,
     MyLogoutView,
 )

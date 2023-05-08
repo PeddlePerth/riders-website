@@ -1,13 +1,15 @@
 {% extends 'base.html' %}
 {% load static %}
 
+{% block title %}Edit your profile{% endblock %}
+
 {% block page_content %}
 <div class="form-container">
     <img src="{% static 'img/peddle-logo.png' %}" alt="Peddle logo">
-    <h1>Rider Profile</h1>
 </div>
 <div class="row g-3 justify-content-center">
 <form method="post" class="col-md-8 col-lg-6 col-xl-6 row g-3" novalidate>
+    <h1>Edit your profile</h1>
     {% csrf_token %}
     {% if form_errors %}<div class="invalid-feedback">{{ form_errors }}</div>{% endif %}
     
@@ -26,6 +28,10 @@
     </div>
     <div class="col-md-8">
         {% with form.email as field %}{% include 'form_field.html' %}{% endwith %}
+    </div>
+
+    <div class="col-12 col-md-6">
+        {% with form.abn as field %}{% include 'form_field.html' %}{% endwith %}
     </div>
     
     <div class="col text-end">

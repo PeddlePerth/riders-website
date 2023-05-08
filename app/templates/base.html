@@ -58,9 +58,9 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNavDropdown">
-                    {% if request.user.is_authenticated or request.person %}
+                    {% if request.user.is_authenticated or request.person.can_login %}
                     <span class="navbar-text">
-                        Welcome, {% if request.user.is_authenticated %}{{ request.user.first_name }}{% else %}{{ request.person.name }}{% endif %}
+                        Welcome, {% if request.user.is_authenticated %}{{ request.user.first_name }}{% else %}{{ request.person.display_name }}{% endif %}
                         {% if request.user.is_authenticated %}<span class="badge bg-success mx-1">User</span>{% endif %}
                         {% if request.user.is_staff %}<span class="badge bg-primary me-1">Admin</span>{% endif %}
                         {% if request.person.is_core_rider %}<span class="badge bg-danger">Core Rider</span>
@@ -69,7 +69,7 @@
                     </span>
                     {% endif %}
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                        {% if request.user.is_authenticated or request.person %}
+                        {% if request.user.is_authenticated or request.person.can_login %}
                         <li class="nav-item">
                             <a class="nav-link active" href="{% url 'my_profile' %}">Profile</a>
                         </li>
@@ -84,6 +84,8 @@
                         <li class="nav-item">
                             <a class="nav-link active" href="{% url 'rider_list' %}">Rider Contacts</a>
                         </li>
+                        {% endif %}
+                        {% if request.user.is_authenticated or request.person.exists %}
                         <li class="nav-item">
                             <a class="nav-link active" href="{% url 'logout' %}">Logout</a>
                         </li>
@@ -144,6 +146,9 @@
             {% block page_content %} {% endblock %}
         </div>
         {% endblock container %}
+        <div id="footer" class="p-2">
+            <div class="text-center">Copyright &copy; 2023 Peddle Perth Pty. Ltd. &nbsp; ABN 30 636 155 729</div>
+        </div>
         </div>
     </body>
 </html>

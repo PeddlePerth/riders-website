@@ -15,17 +15,13 @@ from peddleconcept.tours.schedules import (
 )
 
 from .base import render_base
+from .decorators import require_person_or_user
 
-@login_required
+@require_person_or_user()
 def schedules_view(request, tours_date=None):
     """ HTML view for Tour Schedule Viewer """
     if not (tours_date := get_iso_date(tours_date)):
         return HttpResponseRedirect(reverse('tours_today'))
-
-    try:
-        person = Person.objects.get(user=request.user)
-    except (Person.MultipleObjectsReturned, Person.DoesNotExist):
-        person = None
 
     jsvars = {
         'data_url': reverse('tour_sched_data'),
@@ -36,13 +32,13 @@ def schedules_view(request, tours_date=None):
         'edit_url': reverse('tour_sched_edit', kwargs={'tours_date': 'DATE'}),
         'venues_report_url': reverse('venues_report', kwargs={'week_start': 'DATE'}),
         'tours_date': json_datetime(tours_date),
-        'rider_id': person.id if person else None,
+        'rider_id': request.person.id if request.person.exists else None,
         'is_admin': request.user.is_staff,
     }
 
     return render_base(request, 'schedules', react=True, jsvars=jsvars)
 
-@login_required
+@require_person_or_user(person=True)
 def rider_schedules_view(request, tours_date=None):
     """ HTML view for Rider Tour Schedule """
     if not (tours_date := get_iso_date(tours_date)):
@@ -54,13 +50,13 @@ def rider_schedules_view(request, tours_date=None):
         'today_url': reverse('tours_rider_today'),
         'view_url': reverse('tours_for', kwargs={'tours_date': 'DATE'}),
         'date': json_datetime(tours_date),
-        'rider_id': request.user.id if request.user.is_rider else None,
+        'rider_id': request.person.id,
     }
 
     return render_base(request, 'schedules_rider', react=True, jsvars=jsvars)
 
 
-@login_required
+@require_person_or_user()
 @require_http_methods(['POST'])
 def tours_data_view(request):
     """ Same data view for Tour Schedule Viewer, Rider Tour Schedule and Tour Schedule Editor """
@@ -76,7 +72,7 @@ def tours_data_view(request):
             return HttpResponseBadRequest()
 
     if 'riderTours' in reqdata:
-        data = get_rider_schedule(tours_date, request.user)
+        data = get_rider_schedule(tours_date, request.person)
     else:
         data = get_tour_schedule_data(tours_date)
     return JsonResponse(data)

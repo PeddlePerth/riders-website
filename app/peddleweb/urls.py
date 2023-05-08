@@ -33,17 +33,26 @@ urlpatterns = [
     #path("accounts/reset/<uidb64>/<token>/", auth_views.PasswordResetConfirmView.as_view(), name="password_reset_confirm"),
     #path("accounts/reset/done/", auth_views.PasswordResetCompleteView.as_view(), name="password_reset_complete"),
 
-    path('accounts/login/code/<token>/', views.token_login_view_deprecated, name='token_login'),
+    path('accounts/login/code/<token>/', views.rider_token_login_migrate_view, name='token_login_old'),
+    path('rider/migrate/code/<token>/', views.rider_token_login_migrate_view, name='token_login_migrate'),
+    path('rider/existing/', views.rider_migrate_begin_view, name='rider_migrate_begin'), # basically rider_setup_begin
+    path('rider/existing/verify', views.rider_migrate_verify_view, name='rider_migrate_verify'), # basically rider_setup_begin
 
     path('rider/login/', views.rider_login_view, name='rider_login'),
     path('rider/login/verify/', views.rider_login_verify_view, name='rider_login_verify'),
 
+    path('rider/invite/<token>/', views.rider_setup_invite_view, name='rider_setup_invite'),
     path('rider/setup/', riders.rider_setup_begin_view, name='rider_setup_begin'),
     path('rider/setup/verify', riders.rider_setup_verify_view, name='rider_setup_verify'),
     path('rider/setup/profile', riders.rider_setup_final_view, name='rider_setup_final'),
 
+
+    path('profile/', riders.rider_profile_view, name='my_profile'),
+    path('profile/edit/', riders.rider_profile_edit_view, name='rider_edit_profile'),
+    path('profile/payroll/', riders.rider_profile_edit_payroll_view, name='rider_edit_payroll'),
+    path('profile/verify/', riders.rider_profile_verify_email_view, name='rider_profile_verify_email'),
+
     path('', views.index_view, name='index'),
-    path('profile/', views.my_profile_view, name='my_profile'),
     path('contacts/', views.rider_list_view, name='rider_list'),
     path('tours/', views.schedules_view),
     path('tours/schedule/', views.schedules_view, name='tours_today'),

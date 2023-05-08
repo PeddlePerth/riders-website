@@ -1,20 +1,20 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Peddle Rider Login{% endblock %}
+{% block title %}Rider login{% endblock %}
 
 {% block page_content %}
 
 <div class="form-container">
     <img src="{% static 'img/peddle-logo.png' %}" alt="Peddle logo">
-    <h1>Rider Login</h1>
+    <h1>Peddle Perth Rider Login</h1>
     
-    <p></p>
+    <p>Enter your email address and we'll send you a 6-digit code to login.</p>
 
     <form method="post">
         {% csrf_token %}
         {% with form.email as field %}{% include 'form_field.html' %}{% endwith %}
-        <input class="my-3 btn btn-primary" type="submit" name="submit" value="Login"/>
+        <input class="my-3 btn btn-primary" type="submit" name="submit" value="Next"/>
     </form>
 </div>
 {% endblock %}

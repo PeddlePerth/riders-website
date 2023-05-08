@@ -28,6 +28,16 @@ html, body {
     }
 }
 
+#footer {
+    background-color: #eee;
+    color: grey;
+    min-height: 40px;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    text-align: center;
+}
+
 #navbar {
     margin-bottom: 12px;
     background-color: #d8ff9d;
@@ -82,6 +92,7 @@ tr {
     padding: 0;
 }
 
+
 .form-container {
     display: block;
     margin-left: auto;
@@ -115,6 +126,10 @@ tr {
 .form-p .errorlist {
     color: red;
     list-style-type: none;
+}
+
+.invalid-feedback {
+    display: block !important;
 }
 
 .invalid-feedback .errorlist {
@@ -305,7 +320,7 @@ ul.messagelist li.error {
     width: calc(100% * var(--ts-scale));
     transform: scale(calc(1.0 / var(--ts-scale))); /* translate(-50%, -50%);*/
     transform-origin: top left;
-    position: absolute;
+    /*position: absolute;*/
     padding-bottom: calc(10px * var(--ts-scale));
 }
 

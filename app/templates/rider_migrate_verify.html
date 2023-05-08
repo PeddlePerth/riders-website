@@ -1,22 +1,25 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Rider login{% endblock %}
+{% block title %}Peddle account setup{% endblock %}
 
 {% block page_content %}
 
 <div class="form-container">
     <img src="{% static 'img/peddle-logo.png' %}" alt="Peddle logo">
-    <h1>Rider login</h1>
+    <h1>Verify your email</h1>
     
-    <p>You should receive a 6-digit code in your inbox. Please check your junk mail or re-send the code if needed - emails may take a few minutes to arrive.</p>
+    <p>
+        You should receive a 6-digit code in your inbox. 
+        Please check your junk mail or re-send the code if needed - emails may take a few minutes to arrive.
+    </p>
 
     <form method="post" novalidate>
         {% csrf_token %}
         <p><b>Email address:</b> {{ user_email }}</p>
         {% with form.auth_code as field %}{% include 'form_field.html' %}{% endwith %}
         <input class="my-3 btn btn-secondary me-1" type="submit" name="resend" value="Re-send Code"/>
-        <input class="my-3 btn btn-primary" type="submit" name="verify" value="Verify Email"/>
+        <input class="my-3 btn btn-primary" type="submit" name="verify" value="Verify & save"/>
     </form>
 </div>
 {% endblock %}

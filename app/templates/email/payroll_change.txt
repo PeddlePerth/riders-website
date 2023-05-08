@@ -1,0 +1,8 @@
+Hi there {{ name }},
+
+Please note that your Peddle Rider payroll details have been updated online.
+
+If this was you, please disregard this email. Otherwise let us know ASAP!
+
+Sent from {{ site_url }}
+Peddle Perth Pty Ltd, ABN 30 636 155 729

@@ -3,6 +3,7 @@ import abn
 
 from django import forms
 from peddleconcept.models import Person
+from peddleconcept.models.people import MOBILE_PHONE_REGEX, BSB_REGEX, BANK_ACCT_REGEX
 from accounts.models import PeddleUser
 from django.core.exceptions import ValidationError
 from django.db.models import Q
@@ -12,22 +13,6 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 AUTH_TOKEN_LENGTH = getattr(settings, 'AUTH_TOKEN_LENGTH', 6)
-MOBILE_PHONE_REGEX = re.compile(r'^(\+614|04|00614)\d{8}$')
-BSB_REGEX = re.compile(r'^\d{3}-?\d{3}$')
-BANK_ACCT_REGEX = re.compile(r'^\d{4,20}$')
-
-class ProfileForm(forms.ModelForm):
-    class Meta:
-        model = Person
-        fields = ('first_name', 'last_name', 'phone', 'email', 'abn', 'bank_bsb', 'bank_acct',)
-    
-    first_name = forms.CharField(required=True, max_length=100)
-    last_name = forms.CharField(required=True, max_length=100)
-    phone = forms.CharField(required=True, max_length=30, label='Contact Phone')
-    email = forms.EmailField(required=True, max_length=255, label='Contact Email')
-    abn = forms.CharField(required=True, max_length=30, label='Rider ABN')
-    bank_bsb = forms.CharField(required=True, max_length=10, label='BSB')
-    bank_acct = forms.CharField(required=True, max_length=20, label='Account Number')
 
 def get_form_fields(form):
     form_fields = {}
@@ -83,6 +68,8 @@ class PersonFormMixin:
 
     def clean_abn(self):
         data = self.cleaned_data.get('abn', '')
+        if not data:
+            return ''
         if not (valid := abn.validate(data)):
             raise ValidationError('Must be a valid ABN')
         else:
@@ -93,35 +80,41 @@ class PersonProfileForm(PersonFormMixin, forms.ModelForm):
     """ Personal details profile form: changes to email address will require 2-step verification """
     class Meta:
         model = Person
-        fields = ('first_name', 'last_name', 'display_name', 'phone', 'email')
+        fields = ('first_name', 'last_name', 'display_name', 'phone', 'abn')
 
     first_name = forms.CharField(required=True, max_length=100)
     last_name = forms.CharField(required=True, max_length=100)
     display_name = forms.CharField(required=True, max_length=20)
-    phone = forms.CharField(required=True, max_length=30, label='Mobile Phone')
-    email = forms.EmailField(required=True, max_length=255, label='Email Address')
+    phone = forms.CharField(required=True, max_length=30, label='Mobile phone')
+    email = forms.EmailField(required=True, max_length=255, label='Email address')
+    abn = forms.CharField(required=False, max_length=20, label='Your ABN - if you have one')
 
 class PayrollProfileForm(PersonFormMixin, forms.ModelForm):
     """ Payroll profile update form: sends an email notification to rider if changes are made """
     class Meta:
         model = Person
-        fields = ('abn', 'bank_bsb', 'bank_acct')
+        fields = ('bank_bsb', 'bank_acct')
 
-    abn = forms.CharField(required=True, max_length=20, label='Your ABN')
     bank_bsb = forms.CharField(required=True, max_length=7, label='Bank BSB')
     bank_acct = forms.CharField(required=True, max_length=20, label='Bank Account Number')
 
 class PersonLoginForm(forms.Form):
     email = forms.EmailField(required=True, max_length=255, label='Email address')
 
-class PersonVerifyCodeForm(forms.Form):
+class EmailConfirmForm(forms.ModelForm):
+    class Meta:
+        model = Person
+        fields = ('email', )
+    email = forms.EmailField(required=True, max_length=255, label='Confirm email address')
+
+class AuthCodeForm(forms.Form):
     auth_code = forms.CharField(required=True, max_length=AUTH_TOKEN_LENGTH, label='Enter your %d-digit code' % AUTH_TOKEN_LENGTH)
 
 class RiderSetupBeginForm(forms.ModelForm):
     class Meta:
         model = Person
         fields = ('first_name', 'last_name', 'email')
-
+    
     first_name = forms.CharField(required=True, max_length=100, label='Your first name')
     last_name = forms.CharField(required=True, max_length=100, label='Your surname')
     email = forms.EmailField(required=True, max_length=255, label='Your best email address')
@@ -165,7 +158,7 @@ class RiderSetupBeginForm(forms.ModelForm):
             logger.warning('rider_setup_begin got %d conflicting PeddleUsers, %d conflicting Persons for: (%s, %s, %s)' % (
                 num_users, num_ppl, fname, lname, email
             ))
-            raise ValidationError('Existing user with same name or email')
+            raise ValidationError('Existing user with same name or email.')
         
         return cleaned_data
         

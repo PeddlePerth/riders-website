@@ -132,13 +132,11 @@ def get_venues_summary(tour):
     vsum.append("%s - Tour finish" % format_time(tv.time_depart))
     return '\n'.join(vsum)
 
-def get_rider_schedule(tours_date, rider):
-    """ parepare data for RiderTourSchedule """
+def get_rider_schedule(tours_date, person):
+    """ prepare data for RiderTourSchedule """
     tr_filter = get_date_filter(tours_date, tours_date, 'tour__time_start')
-    tour_rider_qs = TourRider.objects.select_related(
-        'tour', 'session'
-    ).filter(
-        rider=rider, **tr_filter
+    tour_rider_qs = TourRider.objects.select_related('tour', 'person').filter(
+        person=person, **tr_filter
     ).order_by('tour__time_start')
 
     return {
