@@ -12,6 +12,7 @@ from django.utils.timezone import get_default_timezone
 from django.template.loader import get_template
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
+from django.db.models import Q
 from dateutil.parser import parse
 
 from .rezdy_scraper import RezdyScraper
@@ -309,9 +310,19 @@ def update_from_rezdy(start_date, end_date, dry_run=False):
     logger.info(log_msg)    
     
     ## Tours
+    rezdy_tours_all_possible_srids = {} # dict of Rezdy order number AND OrderNumber:OrderItemID to rezdy tour
+
+    # search for tours by Source Row ID matching "added" tours: eg. if a tour is rescheduled to distant future,
+    # it might already be in the DB, and isnt actually "new"
+    for srid, t in rezdy_tours.items():
+        rezdy_tours_all_possible_srids[t.rezdy_order_id] = t
+        rezdy_tours_all_possible_srids[srid] = t
+
     db_tours = {} # Tour rows with source_row_id='{order-number}:{order-item-id}'
     db_tours_legacy = {} # for legacy Tour rows with only order number
-    for tour in Tour.objects.select_related('session').filter(source='rezdy', **date_filter):
+    for tour in Tour.objects.select_related('session').filter(
+            Q(source='rezdy', **date_filter) | 
+            Q(source='rezdy', source_row_id__in=rezdy_tours_all_possible_srids.keys())):
         if not ':' in tour.source_row_id:
             db_tours_legacy[tour.source_row_id] = tour
         else:
@@ -323,7 +334,7 @@ def update_from_rezdy(start_date, end_date, dry_run=False):
     rezdy_tours_added = {} # dict of Rezdy Tour ID to DB tour instance
     rezdy_tours_matched = {} # dict of Rezdy Tour ID to DB tour instance
     for srid, t in rezdy_tours.items():
-        if t.rezdy_order_id in db_tours_legacy:
+        if (t_legacy := db_tours_legacy.get(t.rezdy_order_id)) and t.tour_type == t_legacy.tour_type:
             t_legacy = db_tours_legacy.pop(t.rezdy_order_id)
             t_legacy.source_row_id = t.source_row_id # update the existing tour row source ID while we are here
             rezdy_tours_matched[srid] = t_legacy
@@ -333,10 +344,9 @@ def update_from_rezdy(start_date, end_date, dry_run=False):
             rezdy_tours_added[srid] = t
         t.session = sessions_db[t.rezdy_session_id]
 
-
     db_tours_not_matched = set(db_tours.keys()) - set(rezdy_tours_matched.keys())
     db_tours_to_delete = list(db_tours_legacy.values()) + list(db_tours[srid] for srid in db_tours_not_matched)
-    
+
     log_msg = "merge tours: to_delete=%d (legacy=%d), matched=%d (legacy=%d), added=%d" % (
         len(db_tours_to_delete), num_legacy_orig, len(rezdy_tours_matched), num_legacy_orig - len(db_tours_legacy),
         len(rezdy_tours_added)

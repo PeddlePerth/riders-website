@@ -3,7 +3,7 @@ from django.conf import settings
 from django.utils import timezone
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from datetime import date, datetime
+from datetime import date, datetime, time
 import logging
 
 from peddleconcept.util import json_datetime
@@ -51,10 +51,11 @@ class ChangeLog(models.Model):
     model_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     model_id = models.PositiveIntegerField()
     model = GenericForeignKey('model_type', 'model_id')
+    model_description = models.TextField(blank=True)
 
     change_remote = models.CharField(max_length=20, null=True, blank=True, choices=CHANGE_REMOTE_CHOICES)
     change_type = models.CharField(max_length=20, choices=CHANGE_TYPE_CHOICES)
-    description = models.TextField(blank=True)
+    change_description = models.TextField(blank=True)
     data = models.JSONField(blank=True, null=True)
 
     timestamp = models.DateTimeField(default=timezone.now)
@@ -183,15 +184,21 @@ class MutableDataRecord(models.Model):
         for field in self.MUTABLE_FIELDS:
             orig_value = getattr(self, field)
             if self.update_field(field, getattr(src_row, field)):
-                chg_fields[field] = (orig_value, getattr(self, field))
+                new_value = getattr(self, field)
+                if isinstance(orig_value, (date, datetime, time)):
+                    chg_fields[field] = (orig_value.isoformat(), new_value.isoformat())
+                else:
+                    chg_fields[field] = (orig_value, new_value)
 
         if chg_fields:
             return ChangeLog(
                 model = self,
                 change_remote = self.source,
                 change_type = 'changed',
-                description = 'source_row_id=%s pk=%s changed: %s' % (
-                    self.source_row_id, self.pk,
+                model_description = '%s [pk=%s source_row_id=%s]' % (
+                    str(self), self.source_row_id, self.pk,
+                ),
+                change_description = 'changed: %s' % (
                     '\n'.join('%s --> %s' % (f, v) for f, v in chg_fields.items())
                 ),
             )
@@ -205,7 +212,10 @@ class MutableDataRecord(models.Model):
             model = self,
             change_remote = self.source,
             change_type = 'deleted',
-            description = 'source_row_id=%s pk=%s not found: %s' % (self.source_row_id, self.pk, str(self)),
+            model_description = '%s [pk=%s source_row_id=%s]' % (
+                str(self), self.source_row_id, self.pk,
+            ),
+            change_description = 'source_row_id=%s pk=%s not found: %s' % (self.source_row_id, self.pk, str(self)),
         )
 
     def mark_source_added(self):
@@ -217,5 +227,8 @@ class MutableDataRecord(models.Model):
             model = self,
             change_remote = self.source,
             change_type = 'created',
-            description = 'source_row_id=%s pk=%s created: %s' % (self.source_row_id, self.pk, str(self)),
+            model_description = '%s [pk=%s source_row_id=%s]' % (
+                str(self), self.source_row_id, self.pk,
+            ),
+            change_description = 'source_row_id=%s pk=%s created: %s' % (self.source_row_id, self.pk, str(self)),
         )

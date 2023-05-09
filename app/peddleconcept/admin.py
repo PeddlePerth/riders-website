@@ -87,14 +87,14 @@ class SettingsAdmin(MyModelAdmin):
 
 @admin.register(ChangeLog)
 class ChangeLogAdmin(MyModelAdmin):
-    list_display = ('model_type', 'change_remote', 'change_type', 'description', 'timestamp')
-    list_filter = ('model_type', 'change_remote', 'change_type')
+    list_display = ('model_type', 'change_remote', 'change_type', 'model_description', 'timestamp')
+    list_filter = ('model_type', 'change_remote', 'change_type', 'timestamp')
     ordering = ['-timestamp']
 
     def has_add_permission(self, request):
         return False
     
-    def has_change_permission(self, request):
+    def has_change_permission(self, request, obj=None):
         return False
 
 @admin.register(Person)
