@@ -96,8 +96,8 @@ class Person(MutableDataRecord):
         return self.active and self.signup_status in ('complete', 'migrated')
 
     def profile_complete(self):
-        return (self.display_name is not None and self.phone is not None and self.email_verified
-            and self.abn is not None and self.bank_bsb is not None and self.bank_acct is not None
+        return (self.display_name and self.phone and self.email_verified
+            and self.abn and self.bank_bsb and self.bank_acct
             and self.signup_status == 'complete'
         )
 

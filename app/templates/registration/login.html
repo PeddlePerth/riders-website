@@ -6,7 +6,7 @@
 {% block page_content %}
 <div class="form-container">
     <img src="{% static 'img/peddle-logo.png' %}" alt="Peddle logo">
-    <h1>Staff Login</h1>
+    <h1>Admin Login</h1>
 </div>
 <div class="row g-3 justify-content-center">
     <div class="col-md-6 col-lg-4 col-sm-8">
@@ -16,17 +16,19 @@
     </p>
     {% endif %}
     <form method="post" class="login-form">
+        {% if form.non_field_errors %}<div class="invalid-feedback">{{ form.non_field_errors }}</div>{% endif %}
+
         {% csrf_token %}
         <div class="mb-3">
             <label class="form-label" for="id_username">Username:</label>
             <input class="form-control" type="text" name="username" autofocus="" autocapitalize="none" autocomplete="username" maxlength="150" required="" id="id_username">
         </div>
-        <div class="mb-3">
+        <div class="mb-1">
             <label class="form-label" for="id_password">Password:</label>
             <input class="form-control" type="password" name="password" autocomplete="current-password" required="" id="id_password">
-            <div class="form-text">
-                <b>Note:</b> Riders must login using your link instead of a username/password.
-            </div>
+        </div>
+        <div class="form-text mb-2">
+            <b>Note:</b> riders please <a href="{% url 'rider_login' %}">login here</a> instead.
         </div>
         <input class="btn btn-primary my- mx-auto" type="submit" name="submit" value="Login"/>
     </form>

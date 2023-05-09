@@ -15,8 +15,8 @@
         {% csrf_token %}
         <p><b>Email address:</b> {{ user_email }}</p>
         {% with form.auth_code as field %}{% include 'form_field.html' %}{% endwith %}
+        <input class="my-3 btn btn-primary" type="submit" name="verify" value="Login"/>
         <input class="my-3 btn btn-secondary me-1" type="submit" name="resend" value="Re-send Code"/>
-        <input class="my-3 btn btn-primary" type="submit" name="verify" value="Verify Email"/>
     </form>
 </div>
 {% endblock %}

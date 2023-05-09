@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block page_content %}
-<h1>Rider Contact List</h1>
+<h1>Company Contact List</h1>
 <div class="row g-3 fw-bold fs-5">
     <div class="col-3">Nickname</div>
     <div class="col-5">Name</div>
@@ -12,8 +12,11 @@
     <div class="row g-3">
         <div class="col-3 fw-bold">
             {{ r.display_name }}
-            {% if r.is_staff %}
-            <div class="ms-2 badge bg-primary">Admin</div>
+            {% if r.user.is_staff %}
+            <span class="ms-2 badge bg-primary">Admin</span>
+            {% endif %}
+            {% if r.is_core_rider %}
+            <span class="ms-2 badge bg-danger">Core Rider</span>
             {% endif %}
         </div>
         <div class="col-5">

@@ -44,11 +44,14 @@ def rider_login_view(request):
             except (Person.DoesNotExist, Person.MultipleObjectsReturned):
                 time.sleep(1) # surely this is bad practice somehow but idk
                 logger.warning('Bad rider login attempt with email="%s"' % form.cleaned_data['email'])
-                messages.error(request, 'Please check your email address is correct, or contact an administrator')
+                form.add_error('email', 'Please check your email address is correct, or contact an administrator.')
     else:
         form = PersonLoginForm()
 
-    return render(request, 'rider_login.html', {'form': get_form_fields(form)})
+    return render(request, 'rider_login.html', {
+        'form': get_form_fields(form),
+        'form_errors': form.non_field_errors(),
+    })
 
 @require_null_person
 def rider_login_verify_view(request):
