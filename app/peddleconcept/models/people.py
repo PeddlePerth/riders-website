@@ -95,9 +95,21 @@ class Person(MutableDataRecord):
     def can_login(self):
         return self.active and self.signup_status in ('complete', 'migrated')
 
+    def phone_valid(self):
+        return MOBILE_PHONE_REGEX.fullmatch(self.phone)
+
+    def abn_valid(self):
+        return abn.validate(self.abn) != False
+
+    def bank_details_valid(self):
+        return BSB_REGEX.fullmatch(self.bank_bsb) and BANK_ACCT_REGEX.fullmatch(self.bank_acct)
+
     def profile_complete(self):
-        return (self.display_name and self.phone and self.email_verified
-            and self.abn and self.bank_bsb and self.bank_acct
+        return (
+            self.display_name and self.email_verified
+            and self.phone_valid()
+            and self.abn_valid()
+            and self.bank_details_valid()
             and self.signup_status == 'complete'
         )
 
@@ -113,7 +125,7 @@ class Person(MutableDataRecord):
                 return y
 
     def bank_details_text(self):
-        if self.bank_bsb and self.bank_acct:
+        if self.bank_details_valid():
             return 'Account number ending in %s' % (self.bank_acct[:3])
         else:
             return 'Not provided'

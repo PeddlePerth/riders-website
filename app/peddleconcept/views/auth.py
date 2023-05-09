@@ -10,6 +10,7 @@ from django.conf import settings
 from django.http import HttpResponseRedirect, HttpResponseBadRequest, JsonResponse
 from django.urls import reverse
 from django.utils.decorators import method_decorator
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_protect
 from django.db.models import Q
 
@@ -76,6 +77,9 @@ def rider_login_verify_view(request):
             form = AuthCodeForm(data=request.POST)
             if form.is_valid():
                 if validate_auth_token(request, form.cleaned_data['auth_code']):
+                    obj.last_seen = timezone.now()
+                    obj.email_verified = True
+                    obj.save()
                     del request.session['auth_person_id']
                     request.session['person_id'] = str(obj.id)
                     return HttpResponseRedirect(reverse('my_profile'))

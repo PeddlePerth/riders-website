@@ -207,6 +207,7 @@ def rider_migrate_verify_view(request):
         form = AuthCodeForm()
 
     return render(request, 'rider_setup_verify.html', {
+        'user_email': request.session['rider_email'],
         'form_errors': form.non_field_errors(),
         'form': get_form_fields(form),
     })

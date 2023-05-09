@@ -55,11 +55,24 @@
     </div>
     <div class="col-md-6 col-12">
         <p class="form-text">Phone number</p>
-        <p>{{ request.person.phone }}</p>
+        <p>{% if request.person.phone_valid %}{{ request.person.phone }}&nbsp;<img src="{% static 'admin/img/icon-yes.svg' %}" alt="OK"/>
+        {% else %}Not provided&nbsp;<img src="{% static 'admin/img/icon-no.svg' %}" alt="no"/>{% endif %}</p>
     </div>
     <div class="col-md-6 col-12">
         <p class="form-text">ABN</p>
-        <p>{% if request.person.abn %}{{ request.person.abn }}&nbsp;<img src="{% static 'admin/img/icon-yes.svg' %}" alt="OK"/>
+        <p>{% if request.person.abn_valid %}
+            {{ request.person.abn }}&nbsp;<img src="{% static 'admin/img/icon-yes.svg' %}" alt="OK"/>
+            {% else %}Not provided&nbsp;<img src="{% static 'admin/img/icon-no.svg' %}" alt="no"/>{% endif %}</p>
+    </div>
+
+    <div class="mt-4 mb-0">
+        <span class="fs-4 fw-bold">Payment info</span>
+        <a class="btn btn-primary m-2 mt-0 ms-3" href="{% url 'rider_edit_payroll' %}">Edit</a>
+    </div>
+    <div class="col-12">
+        <p class="form-text">Bank details</p>
+        <p>{% if request.person.bank_details_valid %}
+            {{ request.person.bank_details_text }}&nbsp;<img src="{% static 'admin/img/icon-yes.svg' %}" alt="Yes"/>
             {% else %}Not provided&nbsp;<img src="{% static 'admin/img/icon-no.svg' %}" alt="no"/>{% endif %}</p>
     </div>
 
@@ -80,19 +93,6 @@
             {% if request.person.is_core_rider%}Yes&nbsp;<img src="{% static 'admin/img/icon-yes.svg' %}" alt="Yes"/>
             {% else %}No&nbsp;<img src="{% static 'admin/img/icon-no.svg' %}" alt="Not yet"/>{% endif %}
         </p>
-    </div>
-
-    <div class="mt-4 mb-0">
-        <span class="fs-4 fw-bold">Payment info</span>
-        <a class="btn btn-primary m-2 mt-0 ms-3" href="{% url 'rider_edit_payroll' %}">Edit</a>
-    </div>
-    <div class="col-12">
-        <p class="form-text">Bank details</p>
-        <p>{{ request.person.bank_details_text }}</p>
-    </div>
-
-    <div class="col text-end">
-        
     </div>
 </div>
 </div>
