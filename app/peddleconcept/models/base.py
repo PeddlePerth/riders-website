@@ -1,8 +1,6 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
-from django.contrib.contenttypes.fields import GenericForeignKey
-from django.contrib.contenttypes.models import ContentType
 from datetime import date, datetime, time
 import logging
 
@@ -48,9 +46,7 @@ class ChangeLog(models.Model):
         (x, x) for x in ['deleted', 'undeleted', 'created', 'changed']
     ]
 
-    model_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    model_id = models.PositiveIntegerField()
-    model = GenericForeignKey('model_type', 'model_id')
+    model_type = models.CharField(max_length=30, blank=True)
     model_description = models.TextField(blank=True)
 
     change_remote = models.CharField(max_length=20, null=True, blank=True, choices=CHANGE_REMOTE_CHOICES)
@@ -60,11 +56,6 @@ class ChangeLog(models.Model):
 
     timestamp = models.DateTimeField(default=timezone.now)
     timestamp_saved = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        indexes = [
-            models.Index(fields=["model_type", "model_id"]),
-        ]
 
 class MutableDataRecord(models.Model):
     """
@@ -76,6 +67,7 @@ class MutableDataRecord(models.Model):
     CHANGE_SOURCES = {
         'rezdy': {'auto': True},
         'fringe': {'auto': True},
+        'deputy': {'auto': True},
         '': {'auto': True},
         'auto': {'auto': True},
         'generate_sessions': {'auto': True},
@@ -84,17 +76,17 @@ class MutableDataRecord(models.Model):
     }
 
     CHANGE_SOURCES_CHOICES = [ (x, x) for x in CHANGE_SOURCES.keys() ]
-    SOURCE_ROW_STATE_CHOICES = [ (x, x) for x in ['live', 'deleted', 'none']]
+    SOURCE_ROW_STATE_CHOICES = [ (x, x) for x in ['live', 'deleted', 'none', 'pending']]
 
     # Mutable fields are ones which can be modified by the user AND auto-updated, eg. whatever the thing should keep tabs on
     MUTABLE_FIELDS = ()
     IMMUTABLE_FIELDS = ('source_row_id', 'source_row_state', 'id', 'source', 'field_auto_values', 'updated', 'created')
 
     # some non-fungible identity for the source row, eg. Rezdy order_id
-    source_row_id = models.CharField(max_length=300, blank=True,
+    source_row_id = models.CharField(max_length=300, null=True, blank=True,
         help_text="External ID for this item (eg. Rezdy/Fringe booking number)")
-    source_row_state = models.CharField(max_length=50, blank=True, default='live', choices=SOURCE_ROW_STATE_CHOICES,
-        help_text="Whether the external data item exists (live) or has been deleted, eg. for a cancelled tour") # 'live' or 'deleted'
+    source_row_state = models.CharField(max_length=50, null=True, blank=True, choices=SOURCE_ROW_STATE_CHOICES,
+        help_text="State of the external data row") # 'live' or 'deleted'
 
     # brief machine-friendly description of data source, eg. "rezdy", "fringe", "user"
     source = models.CharField(max_length=50, blank=True, choices=CHANGE_SOURCES_CHOICES,
@@ -192,11 +184,11 @@ class MutableDataRecord(models.Model):
 
         if chg_fields:
             return ChangeLog(
-                model = self,
+                model_type = self._meta.model_name,
                 change_remote = self.source,
                 change_type = 'changed',
                 model_description = '%s [pk=%s source_row_id=%s]' % (
-                    str(self), self.source_row_id, self.pk,
+                    str(self), self.pk, self.source_row_id,
                 ),
                 change_description = 'changed: %s' % (
                     '\n'.join('%s --> %s' % (f, v) for f, v in chg_fields.items())
@@ -209,26 +201,26 @@ class MutableDataRecord(models.Model):
             return # nothing to do
         self.source_row_state = 'deleted'
         return ChangeLog(
-            model = self,
+            model_type = self._meta.model_name,
             change_remote = self.source,
             change_type = 'deleted',
             model_description = '%s [pk=%s source_row_id=%s]' % (
-                str(self), self.source_row_id, self.pk,
+                str(self), self.pk, self.source_row_id, 
             ),
             change_description = 'source_row_id=%s pk=%s not found: %s' % (self.source_row_id, self.pk, str(self)),
         )
 
     def mark_source_added(self):
         """ Returns changelog for row when first found in data source """
-        if self.source_row_state == 'live':
+        if self.source_row_state == 'live' and self.pk:
             return # nothing to do
         self.source_row_state = 'live'
         return ChangeLog(
-            model = self,
+            model_type = self._meta.model_name,
             change_remote = self.source,
             change_type = 'created',
             model_description = '%s [pk=%s source_row_id=%s]' % (
-                str(self), self.source_row_id, self.pk,
+                str(self), self.pk, self.source_row_id,
             ),
             change_description = 'source_row_id=%s pk=%s created: %s' % (self.source_row_id, self.pk, str(self)),
         )

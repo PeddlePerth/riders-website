@@ -71,6 +71,7 @@ class TourAdmin(MyModelAdmin):
     list_display = ('source_row_id', 'customer_name', 'tour_type', 'time_start', 'time_end', 'updated')
     list_filter = ('source', 'source_row_state', 'time_start', 'tour_type')
     ordering = ['-time_start', 'tour_type']
+    search_fields = ['source_row_id', 'customer_name']
     inlines = (TourRiderInline, TourVenueInline)
     formfield_overrides = {
         models.TextField: {'widget': TextInput}
@@ -90,6 +91,7 @@ class ChangeLogAdmin(MyModelAdmin):
     list_display = ('model_type', 'change_remote', 'change_type', 'model_description', 'timestamp')
     list_filter = ('model_type', 'change_remote', 'change_type', 'timestamp')
     ordering = ['-timestamp']
+    search_fields = ('model_description', 'change_description')
 
     def has_add_permission(self, request):
         return False

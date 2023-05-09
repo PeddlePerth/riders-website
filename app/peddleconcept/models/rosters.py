@@ -12,7 +12,7 @@ class Roster(MutableDataRecord):
     """
     MUTABLE_FIELDS = (
         'person', 'area', 'time_start', 'time_end', 'meal_break_mins', 'rest_break_mins',
-        'open_shift', 'warning', 'published', 'shift_notes', 'shift_confirmed', 
+        'open_shift', 'warning', 'warning_override', 'published', 'shift_notes', 'shift_confirmed'
     )
 
     person = models.ForeignKey('Person', on_delete=models.SET_NULL, null=True, blank=True,
@@ -31,10 +31,12 @@ class Roster(MutableDataRecord):
     rest_break_mins = models.PositiveIntegerField(blank=True, default=0)
     open_shift = models.BooleanField(blank=True, default=False)
     warning = models.TextField(blank=True, help_text='Warning message from Deputy if chosen person is not preferred')
+    warning_override = models.TextField(blank=True, help_text='Comment in Deputy if/why warning is ignored')
     published = models.BooleanField(blank=True, default=False, verbose_name='Publish in Deputy')
     shift_notes = models.TextField(blank=True, default=True)
     shift_confirmed = models.BooleanField(blank=True, default=True)
-    timesheet_locked = models.DateTimeField(null=True, blank=True, help_text='Date/Time when timesheet was created for this shift')
+    timesheet_locked = models.DateTimeField(null=True, blank=True,
+        help_text='Date/Time when timesheet was created for this shift')
 
 class RosterTour(models.Model):
     """ intermediate entity providing a list of (non-overlapping) tours for each roster """

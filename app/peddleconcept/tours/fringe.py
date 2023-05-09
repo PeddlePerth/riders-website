@@ -13,6 +13,7 @@ from requests.utils import dict_from_cookiejar
 
 from .red61_scraper import Red61Scraper
 from .schedules import get_bikes_json
+from .areas import load_areas_locations, get_tour_area, save_areas_locations
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,8 @@ def update_from_fringe(start_date, end_date, dry_run=False):
     elif not fringe_ticket_data:
         return True, 'No Fringe tickets for dates %s to %s (%0.1fs)' % (
             start_date.isoformat(), end_date.isoformat(), scan_time.total_seconds())
+
+    load_areas_locations()
 
     tours = {} # keyed by "{performance ID}"
     for ticket in fringe_ticket_data:
@@ -182,6 +185,7 @@ def update_from_fringe(start_date, end_date, dry_run=False):
             bikes = get_bikes_json(total_num),
             quantity = "%d Attendee%s" % (total_num, 's' if total_num > 1 else ''),
             **t,
+            tour_area = get_tour_area(t['pickup_location']),
         )
 
         sess_src = Session(
@@ -261,6 +265,7 @@ def update_from_fringe(start_date, end_date, dry_run=False):
         log_msg = "save tours: added=%d, updated/cancelled=%d, cancelled=%d, unchanged=%d, changelogs=%d" % (
             len(tours_created), tours_updated, len(tours_to_delete), len(db_tours) - tours_updated, len(new_changelogs)
         )
+        save_areas_locations()
     else:
         log_msg = "dry run: no DB changes! tours: added=%d, updated/cancelled=%d, cancelled=%d, unchanged=%d, changelogs=%d" % (
             len(tours_to_add), len(tours_to_update), len(tours_to_delete), len(db_tours) - len(tours_to_update), len(changelogs)

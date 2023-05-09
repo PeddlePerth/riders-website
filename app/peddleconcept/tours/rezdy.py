@@ -16,6 +16,7 @@ from django.db.models import Q
 from dateutil.parser import parse
 
 from .rezdy_scraper import RezdyScraper
+from .areas import load_areas_locations, get_tour_area, save_areas_locations
 
 logger = logging.getLogger(__name__)
 
@@ -131,28 +132,31 @@ def parse_manifest_tours(manifest_response):
         quantity = html_unescape(t['quantities']).strip()
         booking_name = html_unescape(t['customer-full-name']).strip()
 
-        if (cust_names := html_unescape(t['participants-list'])):
-            cust_names = cust_names.replace(booking_name, '').strip()
-        
-        cust_names = booking_name + '\n' + cust_names
+        # unbelievably, sometimes Rezdy spits out Double Escaped strings!
+        if (cust_names := html_unescape(html_unescape(t['participants-list']))):
+            cust_name = booking_name + '\n' + cust_names.replace(booking_name, '').replace('\n\n', '\n').strip()
+        else:
+            cust_name = booking_name
 
         order_id = "%s:%s" % (
             html_unescape(t['order-number']).strip(),
             t['order-item-id'],
         )
+        pickup = html_unescape(t['pick-up-location']).strip()
         tour = Tour(
             source_row_id = order_id,
             source_row_state = 'live',
             source = 'rezdy',
             time_start = time_start,
             time_end = time_end,
-            tour_type = html_unescape(t['product']),
-            pickup_location = html_unescape(t['pick-up-location']).strip(),
-            customer_name = cust_names,
+            tour_type = html_unescape(t['product']).strip(),
+            pickup_location = pickup,
+            customer_name = cust_name,
             customer_contact = html_unescape(t['customer-phone']).strip(),
             quantity = quantity,
             bikes = get_bikes_from_quantity(quantity),
             notes = '\n'.join(( html_unescape(t[field]) for field in REZDY_NOTES_FIELDS )).strip(),
+            tour_area = get_tour_area(pickup),
         )
 
         # extra attributes for processing only - not saved to DB
@@ -182,6 +186,8 @@ def update_from_rezdy(start_date, end_date, dry_run=False):
         log += msg + '\n'
         return False, log
     
+    load_areas_locations()
+
     rezdy_tours = {}
     rezdy_sessions = {}
 
@@ -199,25 +205,25 @@ def update_from_rezdy(start_date, end_date, dry_run=False):
             log += log_msg + '\n'
             return False, log
 
-        #try:
-        # convert manifest JSON data into Tour and Session instances
-        # note these will have some extra attributes:
-        # Tour.rezdy_session_id
-        # Tour.rezdy_order_id
-        tours = parse_manifest_tours(manifest_resp)
-        sessions = parse_manifest_sessions(manifest_resp)
-        rezdy_tours.update(tours)
-        rezdy_sessions.update(sessions)
-        log_msg = '%s: got %d tours, %d sessions in %0.1fs' % (
-            day_date.isoformat(), len(tours), len(sessions), (now - last_time).total_seconds()
-        )
-        log += '%s\n' % log_msg
-        logger.debug(log_msg)
-        num_days_ok += 1
-        #except  as e:
-        #    errormsg = 'Rezdy tour manifest for date %s returned error: %s' % (day_date.isoformat(), e)
-        #    logger.error(errormsg)
-        #    log += errormsg + '\n'
+        try:
+            # convert manifest JSON data into Tour and Session instances
+            # note these will have some extra attributes:
+            # Tour.rezdy_session_id
+            # Tour.rezdy_order_id
+            tours = parse_manifest_tours(manifest_resp)
+            sessions = parse_manifest_sessions(manifest_resp)
+            rezdy_tours.update(tours)
+            rezdy_sessions.update(sessions)
+            log_msg = '%s: got %d tours, %d sessions in %0.1fs' % (
+                day_date.isoformat(), len(tours), len(sessions), (now - last_time).total_seconds()
+            )
+            log += '%s\n' % log_msg
+            logger.debug(log_msg)
+            num_days_ok += 1
+        except Exception as e:
+            errormsg = 'Rezdy tour manifest for date %s returned error: %s' % (day_date.isoformat(), e)
+            logger.error(errormsg)
+            log += '%s\n' % errormsg
         last_time = now
 
         if num_days_ok == 1:
@@ -318,14 +324,24 @@ def update_from_rezdy(start_date, end_date, dry_run=False):
         rezdy_tours_all_possible_srids[t.rezdy_order_id] = t
         rezdy_tours_all_possible_srids[srid] = t
 
+    db_tours_duplicate = []
     db_tours = {} # Tour rows with source_row_id='{order-number}:{order-item-id}'
     db_tours_legacy = {} # for legacy Tour rows with only order number
-    for tour in Tour.objects.select_related('session').filter(
+    for tour in Tour.objects.select_related('session').order_by('time_start').filter(
             Q(source='rezdy', **date_filter) | 
             Q(source='rezdy', source_row_id__in=rezdy_tours_all_possible_srids.keys())):
+        # try to find duplicate tours here: keep only the LATEST copy
+        if tour.source_row_id in db_tours_legacy:
+            db_tours_duplicate.append(db_tours_legacy.pop(tour.source_row_id))
+        if tour.source_row_id in db_tours:
+            db_tours_duplicate.append(db_tours.pop(tour.source_row_id))
+
         if not ':' in tour.source_row_id:
             db_tours_legacy[tour.source_row_id] = tour
         else:
+            order_number, _ = tour.source_row_id.split(':')
+            if order_number in db_tours_legacy:
+                db_tours_duplicate.append(db_tours_legacy.pop(order_number))
             db_tours[tour.source_row_id] = tour
 
     num_legacy_orig = len(db_tours_legacy)
@@ -334,22 +350,25 @@ def update_from_rezdy(start_date, end_date, dry_run=False):
     rezdy_tours_added = {} # dict of Rezdy Tour ID to DB tour instance
     rezdy_tours_matched = {} # dict of Rezdy Tour ID to DB tour instance
     for srid, t in rezdy_tours.items():
-        if (t_legacy := db_tours_legacy.get(t.rezdy_order_id)) and t.tour_type == t_legacy.tour_type:
+        if (t_legacy := db_tours_legacy.get(t.rezdy_order_id)) and (
+            t.tour_type.lower().strip() == t_legacy.tour_type.lower().strip()):
             t_legacy = db_tours_legacy.pop(t.rezdy_order_id)
             t_legacy.source_row_id = t.source_row_id # update the existing tour row source ID while we are here
             rezdy_tours_matched[srid] = t_legacy
         elif srid in db_tours:
             rezdy_tours_matched[srid] = db_tours[srid]
         else:
+            if (chglog := t.mark_source_added()):
+                changelogs.append(chglog)
             rezdy_tours_added[srid] = t
         t.session = sessions_db[t.rezdy_session_id]
 
     db_tours_not_matched = set(db_tours.keys()) - set(rezdy_tours_matched.keys())
     db_tours_to_delete = list(db_tours_legacy.values()) + list(db_tours[srid] for srid in db_tours_not_matched)
 
-    log_msg = "merge tours: to_delete=%d (legacy=%d), matched=%d (legacy=%d), added=%d" % (
+    log_msg = "merge tours: to_delete=%d (legacy=%d), matched=%d (legacy=%d), added=%d, duplicates=%d" % (
         len(db_tours_to_delete), num_legacy_orig, len(rezdy_tours_matched), num_legacy_orig - len(db_tours_legacy),
-        len(rezdy_tours_added)
+        len(rezdy_tours_added), len(db_tours_duplicate),
     )
     log += '%s: %s\n' % (datetime.now().isoformat(), log_msg)
     logger.info(log_msg)
@@ -365,7 +384,7 @@ def update_from_rezdy(start_date, end_date, dry_run=False):
         if (chglog := tour.mark_source_deleted()):
             changelogs.append(chglog)
         tours_to_update.append(tour)
-    
+
     if not dry_run:
         num_updated = Tour.objects.bulk_update(tours_to_update,
             fields=[f.name for f in Tour._meta.fields if not f.name == 'id'])
@@ -375,7 +394,8 @@ def update_from_rezdy(start_date, end_date, dry_run=False):
             if (chglog := tour.mark_source_added()):
                 changelogs.append(chglog)
         new_changelogs = ChangeLog.objects.bulk_create(changelogs)
-    
+        save_areas_locations()
+
         log_msg = "save tours: added=%d, updated/cancelled=%d, cancelled=%d, unchanged=%d. Saved %d changelogs" % (
             len(tours_created), num_updated, len(db_tours_to_delete), num_unchanged, len(new_changelogs)
         )

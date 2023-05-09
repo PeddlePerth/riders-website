@@ -28,7 +28,7 @@ class Person(MutableDataRecord):
     class Meta:
         verbose_name_plural = 'People'
 
-    MUTABLE_FIELDS = ('first_name', 'last_name', 'display_name', 'email', 'active')
+    MUTABLE_FIELDS = ('first_name', 'last_name', 'display_name', 'active', 'phone', 'email')
     first_name = models.CharField(max_length=200)
     last_name = models.CharField(max_length=200)
     display_name = models.CharField(max_length=200, unique=True, null=True, verbose_name='Preferred Name', 

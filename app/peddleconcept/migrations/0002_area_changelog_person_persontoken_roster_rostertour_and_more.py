@@ -121,6 +121,7 @@ class Migration(migrations.Migration):
                         blank=True,
                         help_text="External ID for this item (eg. Rezdy/Fringe booking number)",
                         max_length=300,
+                        null=True,
                     ),
                 ),
                 (
@@ -131,10 +132,11 @@ class Migration(migrations.Migration):
                             ("live", "live"),
                             ("deleted", "deleted"),
                             ("none", "none"),
+                            ("pending", "pending"),
                         ],
-                        default="live",
-                        help_text="Whether the external data item exists (live) or has been deleted, eg. for a cancelled tour",
+                        help_text="State of the external data row",
                         max_length=50,
+                        null=True,
                     ),
                 ),
                 (
@@ -144,6 +146,7 @@ class Migration(migrations.Migration):
                         choices=[
                             ("rezdy", "rezdy"),
                             ("fringe", "fringe"),
+                            ("deputy", "deputy"),
                             ("", ""),
                             ("auto", "auto"),
                             ("generate_sessions", "generate_sessions"),
@@ -172,16 +175,16 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "display_name",
-                    models.CharField(max_length=200, verbose_name="Area display name"),
+                    models.CharField(max_length=200, blank=True, verbose_name="Area display name"),
                 ),
                 (
                     "colour",
-                    models.CharField(max_length=50, verbose_name="Hex colour code"),
+                    models.CharField(max_length=50, blank=True, null=True, verbose_name="Hex colour code"),
                 ),
                 (
                     "tour_locations",
                     models.JSONField(
-                        default=list,
+                        default=dict,
                         help_text="JSON list of strings being each tour pickup location included under this area",
                     ),
                 ),
@@ -212,7 +215,6 @@ class Migration(migrations.Migration):
                         verbose_name="ID",
                     ),
                 ),
-                ("model_id", models.PositiveIntegerField()),
                 (
                     "change_remote",
                     models.CharField(
@@ -246,10 +248,7 @@ class Migration(migrations.Migration):
                 ("timestamp_saved", models.DateTimeField(auto_now_add=True)),
                 (
                     "model_type",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        to="contenttypes.contenttype",
-                    ),
+                    models.CharField(max_length=30, blank=True),
                 ),
             ],
         ),
@@ -271,6 +270,7 @@ class Migration(migrations.Migration):
                         blank=True,
                         help_text="External ID for this item (eg. Rezdy/Fringe booking number)",
                         max_length=300,
+                        null=True,
                     ),
                 ),
                 (
@@ -281,10 +281,11 @@ class Migration(migrations.Migration):
                             ("live", "live"),
                             ("deleted", "deleted"),
                             ("none", "none"),
+                            ("pending", "pending"),
                         ],
-                        default="live",
-                        help_text="Whether the external data item exists (live) or has been deleted, eg. for a cancelled tour",
+                        help_text="State of the external data row",
                         max_length=50,
+                        null=True,
                     ),
                 ),
                 (
@@ -294,6 +295,7 @@ class Migration(migrations.Migration):
                         choices=[
                             ("rezdy", "rezdy"),
                             ("fringe", "fringe"),
+                            ("deputy", "deputy"),
                             ("", ""),
                             ("auto", "auto"),
                             ("generate_sessions", "generate_sessions"),
@@ -529,6 +531,7 @@ class Migration(migrations.Migration):
                         blank=True,
                         help_text="External ID for this item (eg. Rezdy/Fringe booking number)",
                         max_length=300,
+                        null=True,
                     ),
                 ),
                 (
@@ -539,10 +542,11 @@ class Migration(migrations.Migration):
                             ("live", "live"),
                             ("deleted", "deleted"),
                             ("none", "none"),
+                            ("pending", "pending"),
                         ],
-                        default="live",
-                        help_text="Whether the external data item exists (live) or has been deleted, eg. for a cancelled tour",
+                        help_text="State of the external data row",
                         max_length=50,
+                        null=True,
                     ),
                 ),
                 (
@@ -552,6 +556,7 @@ class Migration(migrations.Migration):
                         choices=[
                             ("rezdy", "rezdy"),
                             ("fringe", "fringe"),
+                            ("deputy", "deputy"),
                             ("", ""),
                             ("auto", "auto"),
                             ("generate_sessions", "generate_sessions"),
@@ -582,6 +587,12 @@ class Migration(migrations.Migration):
                     models.TextField(
                         blank=True,
                         help_text="Warning message from Deputy if chosen person is not preferred",
+                    ),
+                ),
+                (
+                    "warning_override",
+                    models.TextField(
+                        blank=True, help_text="Comment in Deputy if/why warning is ignored"
                     ),
                 ),
                 (
@@ -906,6 +917,7 @@ class Migration(migrations.Migration):
                 choices=[
                     ("rezdy", "rezdy"),
                     ("fringe", "fringe"),
+                    ("deputy", "deputy"),
                     ("", ""),
                     ("auto", "auto"),
                     ("generate_sessions", "generate_sessions"),
@@ -923,6 +935,7 @@ class Migration(migrations.Migration):
                 blank=True,
                 help_text="External ID for this item (eg. Rezdy/Fringe booking number)",
                 max_length=300,
+                null=True,
             ),
         ),
         migrations.AlterField(
@@ -930,10 +943,15 @@ class Migration(migrations.Migration):
             name="source_row_state",
             field=models.CharField(
                 blank=True,
-                choices=[("live", "live"), ("deleted", "deleted"), ("none", "none")],
-                default="live",
-                help_text="Whether the external data item exists (live) or has been deleted, eg. for a cancelled tour",
+                choices=[
+                    ("live", "live"),
+                    ("deleted", "deleted"),
+                    ("none", "none"),
+                    ("pending", "pending"),
+                ],
+                help_text="State of the external data row",
                 max_length=50,
+                null=True,
             ),
         ),
         migrations.AlterField(
@@ -953,6 +971,7 @@ class Migration(migrations.Migration):
                 choices=[
                     ("rezdy", "rezdy"),
                     ("fringe", "fringe"),
+                    ("deputy", "deputy"),
                     ("", ""),
                     ("auto", "auto"),
                     ("generate_sessions", "generate_sessions"),
@@ -970,6 +989,7 @@ class Migration(migrations.Migration):
                 blank=True,
                 help_text="External ID for this item (eg. Rezdy/Fringe booking number)",
                 max_length=300,
+                null=True,
             ),
         ),
         migrations.AlterField(
@@ -977,10 +997,15 @@ class Migration(migrations.Migration):
             name="source_row_state",
             field=models.CharField(
                 blank=True,
-                choices=[("live", "live"), ("deleted", "deleted"), ("none", "none")],
-                default="live",
-                help_text="Whether the external data item exists (live) or has been deleted, eg. for a cancelled tour",
+                choices=[
+                    ("live", "live"),
+                    ("deleted", "deleted"),
+                    ("none", "none"),
+                    ("pending", "pending"),
+                ],
+                help_text="State of the external data row",
                 max_length=50,
+                null=True,
             ),
         ),
         migrations.AlterField(
@@ -1100,6 +1125,7 @@ class Migration(migrations.Migration):
                 choices=[
                     ("rezdy", "rezdy"),
                     ("fringe", "fringe"),
+                    ("deputy", "deputy"),
                     ("", ""),
                     ("auto", "auto"),
                     ("generate_sessions", "generate_sessions"),
@@ -1117,6 +1143,7 @@ class Migration(migrations.Migration):
                 blank=True,
                 help_text="External ID for this item (eg. Rezdy/Fringe booking number)",
                 max_length=300,
+                null=True,
             ),
         ),
         migrations.AlterField(
@@ -1124,10 +1151,15 @@ class Migration(migrations.Migration):
             name="source_row_state",
             field=models.CharField(
                 blank=True,
-                choices=[("live", "live"), ("deleted", "deleted"), ("none", "none")],
-                default="live",
-                help_text="Whether the external data item exists (live) or has been deleted, eg. for a cancelled tour",
+                choices=[
+                    ("live", "live"),
+                    ("deleted", "deleted"),
+                    ("none", "none"),
+                    ("pending", "pending"),
+                ],
+                help_text="State of the external data row",
                 max_length=50,
+                null=True,
             ),
         ),
         migrations.AlterField(
@@ -1182,6 +1214,7 @@ class Migration(migrations.Migration):
                 choices=[
                     ("rezdy", "rezdy"),
                     ("fringe", "fringe"),
+                    ("deputy", "deputy"),
                     ("", ""),
                     ("auto", "auto"),
                     ("generate_sessions", "generate_sessions"),
@@ -1199,6 +1232,7 @@ class Migration(migrations.Migration):
                 blank=True,
                 help_text="External ID for this item (eg. Rezdy/Fringe booking number)",
                 max_length=300,
+                null=True,
             ),
         ),
         migrations.AlterField(
@@ -1206,10 +1240,15 @@ class Migration(migrations.Migration):
             name="source_row_state",
             field=models.CharField(
                 blank=True,
-                choices=[("live", "live"), ("deleted", "deleted"), ("none", "none")],
-                default="live",
-                help_text="Whether the external data item exists (live) or has been deleted, eg. for a cancelled tour",
+                choices=[
+                    ("live", "live"),
+                    ("deleted", "deleted"),
+                    ("none", "none"),
+                    ("pending", "pending"),
+                ],
+                help_text="State of the external data row",
                 max_length=50,
+                null=True,
             ),
         ),
         migrations.AlterField(
@@ -1229,6 +1268,7 @@ class Migration(migrations.Migration):
                 choices=[
                     ("rezdy", "rezdy"),
                     ("fringe", "fringe"),
+                    ("deputy", "deputy"),
                     ("", ""),
                     ("auto", "auto"),
                     ("generate_sessions", "generate_sessions"),
@@ -1246,6 +1286,7 @@ class Migration(migrations.Migration):
                 blank=True,
                 help_text="External ID for this item (eg. Rezdy/Fringe booking number)",
                 max_length=300,
+                null=True,
             ),
         ),
         migrations.AlterField(
@@ -1253,10 +1294,15 @@ class Migration(migrations.Migration):
             name="source_row_state",
             field=models.CharField(
                 blank=True,
-                choices=[("live", "live"), ("deleted", "deleted"), ("none", "none")],
-                default="live",
-                help_text="Whether the external data item exists (live) or has been deleted, eg. for a cancelled tour",
+                choices=[
+                    ("live", "live"),
+                    ("deleted", "deleted"),
+                    ("none", "none"),
+                    ("pending", "pending"),
+                ],
+                help_text="State of the external data row",
                 max_length=50,
+                null=True,
             ),
         ),
         migrations.AlterField(
@@ -1349,12 +1395,6 @@ class Migration(migrations.Migration):
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
                 to="peddleconcept.area",
-            ),
-        ),
-        migrations.AddIndex(
-            model_name="changelog",
-            index=models.Index(
-                fields=["model_type", "model_id"], name="peddleconce_model_t_2f4c42_idx"
             ),
         ),
         migrations.RunPython(
