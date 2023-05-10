@@ -40,6 +40,9 @@ class Area(MutableDataRecord):
     def name(self):
         return self.display_name or self.area_name
 
+    def __str__(self):
+        return self.name
+
 class Venue(models.Model):
     name = models.CharField(max_length=200, help_text="Name of venue to show on schedules & in the editor")
     drink_special = models.CharField(max_length=100, blank=True, help_text="Specials/Notes to auto-fill in the schedule")

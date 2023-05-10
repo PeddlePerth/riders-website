@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.forms.widgets import TextInput
 from django import forms
 from django.db import models
+from django.template.loader import render_to_string
 import json
 from .models import *
 from .actions import download_as_csv
@@ -68,8 +69,8 @@ class VenueAdmin(MyModelAdmin):
 
 @admin.register(Tour)
 class TourAdmin(MyModelAdmin):
-    list_display = ('source_row_id', 'customer_name', 'tour_type', 'time_start', 'time_end', 'updated')
-    list_filter = ('source', 'source_row_state', 'time_start', 'tour_type')
+    list_display = ('source_row_id', 'customer_name', 'tour_area', 'tour_type', 'time_start', 'time_end', 'updated')
+    list_filter = ('source', 'source_row_state', 'time_start', 'tour_area', 'tour_type')
     ordering = ['-time_start', 'tour_type']
     search_fields = ['source_row_id', 'customer_name']
     inlines = (TourRiderInline, TourVenueInline)
@@ -115,3 +116,16 @@ class PersonTokenAdmin(MyModelAdmin):
     list_filter = ('valid_days', 'action', 'person__active')
     exclude = ['token']
     readonly_fields = ['person']
+
+@admin.register(Area)
+class AreaAdmin(MyModelAdmin):
+    list_display = (
+        'name', 'tour_locations_html', 'active', 'deputy_sync_enabled'
+    )
+    ordering = ['sort_order']
+    list_filter = ['active', 'deputy_sync_enabled']
+    search_fields = ['tour_locations']
+
+    @admin.display(description='Tour Pickup Locations')
+    def tour_locations_html(self, obj):
+        return render_to_string('admin/area_tour_locations.html', {'obj': obj})
