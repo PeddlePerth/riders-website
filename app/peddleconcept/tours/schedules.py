@@ -4,6 +4,7 @@ import math
 from peddleconcept.models import *
 from peddleconcept.util import *
 from peddleconcept.settings import *
+from django.utils.timezone import localdate, localtime
 
 logger = logging.getLogger(__name__)
 
@@ -376,15 +377,15 @@ def get_venues_report(start_date, end_date):
         # keep track of total number of pax, also what pax in different groups/tours
         # here we group by timespan as well (eg. one booking per timespan per venue)
         # also, group by date per venue
-        tour_date = tv.tour.time_start.date()
+        tour_date = localdate(tv.tour.time_start)
         vdate = venue['booking_dates'].setdefault(tour_date, {
             'date': json_datetime(tour_date),
             'times': {},
         })
         
         time_key = "%s-%s" % (
-            tv.time_arrive.isoformat(),
-            tv.time_depart.isoformat(),
+            localtime(tv.time_arrive).isoformat(),
+            localtime(tv.time_depart).isoformat(),
         )
 
         vt = vdate['times'].setdefault(time_key, {
@@ -404,7 +405,6 @@ def get_venues_report(start_date, end_date):
         venue['booking_dates'] = sorted(venue['booking_dates'].values(), key=lambda b: b['date'])
         for vdate in venue['booking_dates']:
             vdate['times'] = sorted(vdate['times'].values(), key=lambda vt: vt['time_arrive'])
-        
 
     return venues
 

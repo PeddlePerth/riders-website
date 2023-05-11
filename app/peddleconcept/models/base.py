@@ -195,7 +195,13 @@ class MutableDataRecord(models.Model):
                 ),
             )
 
-    def mark_source_deleted(self):
+    def mark_update_pushed(self, src_row):
+        """ Marks row as updated in remote DB """
+        if (chglog := src_row.update_from_instance(self)):
+            chglog.change_type = 'push_change'
+            return chglog
+
+    def mark_source_deleted(self, push=False):
         """ Marks row as deleted from data source """
         if self.source_row_state == 'deleted':
             return # nothing to do
@@ -203,14 +209,14 @@ class MutableDataRecord(models.Model):
         return ChangeLog(
             model_type = self._meta.model_name,
             change_remote = self.source,
-            change_type = 'deleted',
+            change_type = 'deleted' if not push else 'push_delete',
             model_description = '%s [pk=%s source_row_id=%s]' % (
                 str(self), self.pk, self.source_row_id, 
             ),
             change_description = 'source_row_id=%s pk=%s not found: %s' % (self.source_row_id, self.pk, str(self)),
         )
 
-    def mark_source_added(self):
+    def mark_source_added(self, push=False):
         """ Returns changelog for row when first found in data source """
         if self.source_row_state == 'live' and self.pk:
             return # nothing to do
@@ -218,7 +224,7 @@ class MutableDataRecord(models.Model):
         return ChangeLog(
             model_type = self._meta.model_name,
             change_remote = self.source,
-            change_type = 'created',
+            change_type = 'created' if not push else 'push_create',
             model_description = '%s [pk=%s source_row_id=%s]' % (
                 str(self), self.pk, self.source_row_id,
             ),

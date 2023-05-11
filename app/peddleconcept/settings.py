@@ -27,12 +27,11 @@ AUTO_UPDATE_STATUS = 'auto_update_state'
 BIKES_SETTING = 'bike_types'
 
 VENUES_PRESETS_SETTING = 'venues_presets'
-#ROSTER_SETUP_TIME_SETTING = 'roster_wh_setup_time'
+ROSTER_GENERAL_SETTINGS = 'roster_settings'
 
 AVAILABILITY_DEFAULT_WEEK_SETTING = 'availability_week_default'
 
 DEPUTY_API_SETTING = 'deputy_api'
-DEPUTY_DEFAULTS_SETTING = 'deputy_defaults'
 
 RIDER_PAYRATE_SETTING = 'rider_pay_rates'
 
@@ -45,21 +44,10 @@ def get_setting_or_default(setting_name, default):
     
     return s.data
 
-#def get_roster_setup_time():
-#    return get_setting_or_default(ROSTER_SETUP_TIME_SETTING, {
-#        'setup_time_WH': 45,
-#    })
-
-def get_availability_week_default():
-    return get_setting_or_default(AVAILABILITY_DEFAULT_WEEK_SETTING, [
-        {'enabled': False, 'notes': 'No Tours', 'options': []},
-        {'enabled': True, 'notes': 'Christmas Lights', 'options': ['tours']},
-        {'enabled': True, 'notes': 'Christmas Lights', 'options': ['tours']},
-        {'enabled': True, 'notes': 'Christmas Lights', 'options': ['tours']},
-        {'enabled': True, 'notes': 'Christmas Lights\nTours & Hustle', 'options': ['tours', 'hustle']},
-        {'enabled': True, 'notes': 'Christmas Lights\nTours & Hustle', 'options': ['tours', 'hustle']},
-        {'enabled': True, 'notes': 'Christmas Lights', 'options': ['tours']},
-    ])
+def get_roster_setup_time():
+    return get_setting_or_default(ROSTER_GENERAL_SETTINGS, {
+        'setup_time_WH_minutes': 45,
+    })
 
 def get_login_setting(setting_name):
     return get_setting_or_default(setting_name, {
@@ -143,12 +131,8 @@ def get_deputy_api_setting():
     return get_setting_or_default(DEPUTY_API_SETTING, {
         'endpoint_url': 'https://{install}.{geo}.deputy.com',
         'auth_token': '',
-    })
-
-def get_deputy_defaults_setting():
-    return get_setting_or_default(DEPUTY_DEFAULTS_SETTING, {
-        'company_id': 1234,
-        'employee_role_id': 1234,
+        'default_company_id': 1,
+        'default_employee_role_id': 50, # corresponds to "Employee" in our Deputy setup
     })
 
 def get_rider_payrate_setting():

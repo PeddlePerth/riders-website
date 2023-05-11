@@ -1,6 +1,8 @@
 from datetime import datetime, time, date, timedelta
 from django.forms import model_to_dict
-from django.utils.timezone import localtime, make_aware, is_aware, get_default_timezone, now
+from django.utils.timezone import (
+    localtime, localdate, make_aware, is_aware, get_default_timezone, now
+)
 from urllib.parse import urlparse
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
@@ -266,7 +268,7 @@ def get_date_filter(start_date, end_date, field):
 
 def get_iso_date(date_str=None):
     if not date_str:
-        return now().date()
+        return localdate(now())
     else:
         try:
             return datetime.strptime(date_str, "%Y-%m-%d").date()
