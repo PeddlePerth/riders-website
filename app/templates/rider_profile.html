@@ -31,8 +31,13 @@
     {% endif %}
     <div class="mt-3 mb-0">
         <span class="fs-4 fw-bold">Personal details</span>
+        {% if not request.person.has_deputy_account %}
         <a class="btn btn-primary m-2 mt-0 ms-3" href="{% url 'rider_edit_profile' %}">Edit</a>
+        {% endif %}
     </div>
+    {% if request.person.has_deputy_account %}
+    <p class="form-text">Your details are linked to your Deputy account. Please edit them in the Deputy app.</p>
+    {% endif %}
     <div class="col-sm-12 col-md-4">
         <p class="form-text">Display name</p>
         <p><b>{{ request.person.display_name }}</b></p>
@@ -58,16 +63,16 @@
         <p>{% if request.person.phone_valid %}{{ request.person.phone }}&nbsp;<img src="{% static 'admin/img/icon-yes.svg' %}" alt="OK"/>
         {% else %}Not provided&nbsp;<img src="{% static 'admin/img/icon-no.svg' %}" alt="no"/>{% endif %}</p>
     </div>
+
+    <div class="mt-4 mb-0">
+        <span class="fs-4 fw-bold">Payment info</span>
+        <a class="btn btn-primary m-2 mt-0 ms-3" href="{% url 'rider_edit_payroll' %}">Edit</a>
+    </div>
     <div class="col-md-6 col-12">
         <p class="form-text">ABN</p>
         <p>{% if request.person.abn_valid %}
             {{ request.person.abn }}&nbsp;<img src="{% static 'admin/img/icon-yes.svg' %}" alt="OK"/>
             {% else %}Not provided&nbsp;<img src="{% static 'admin/img/icon-no.svg' %}" alt="no"/>{% endif %}</p>
-    </div>
-
-    <div class="mt-4 mb-0">
-        <span class="fs-4 fw-bold">Payment info</span>
-        <a class="btn btn-primary m-2 mt-0 ms-3" href="{% url 'rider_edit_payroll' %}">Edit</a>
     </div>
     <div class="col-12">
         <p class="form-text">Bank details</p>
@@ -91,7 +96,7 @@
         <p class="form-text">Core rider</p>
         <p>
             {% if request.person.is_core_rider%}Yes&nbsp;<img src="{% static 'admin/img/icon-yes.svg' %}" alt="Yes"/>
-            {% else %}No&nbsp;<img src="{% static 'admin/img/icon-no.svg' %}" alt="Not yet"/>{% endif %}
+            {% else %}No{% endif %}
         </p>
     </div>
 </div>

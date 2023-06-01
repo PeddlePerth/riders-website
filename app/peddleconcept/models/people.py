@@ -99,7 +99,11 @@ class Person(MutableDataRecord):
         return self.active and self.signup_status in ('complete', 'migrated')
 
     def phone_valid(self):
-        return MOBILE_PHONE_REGEX.fullmatch(self.phone)
+        if self.has_deputy_account:
+            return True
+        if self.phone is not None:
+            return MOBILE_PHONE_REGEX.fullmatch(self.phone)
+        return False
 
     def abn_valid(self):
         return abn.validate(self.abn) != False
@@ -110,7 +114,7 @@ class Person(MutableDataRecord):
     def profile_complete(self):
         return (
             self.display_name and self.email_verified
-            and self.phone_valid()
+            and (self.phone_valid() or self.has_deputy_account) # can't change phone or email once invited to deputy
             and self.abn_valid()
             and self.bank_details_valid()
             and self.signup_status == 'complete'

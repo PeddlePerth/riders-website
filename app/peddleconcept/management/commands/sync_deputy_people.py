@@ -23,7 +23,7 @@ class Command(BaseCommand):
     @transaction.atomic
     def handle(self, *args, overwrite_existing=False, **options):
         company = None
-        if 'company_id' in options:
+        if options['company_id']:
             company = int(options['company_id'])
         sync_deputy_people(
             dry_run=options['dry_run'], 

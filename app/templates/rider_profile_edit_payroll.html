@@ -16,6 +16,10 @@
     {% csrf_token %}
     {% if form_errors %}<div class="invalid-feedback">{{ form_errors }}</div>{% endif %}
 
+    <div class="col-12">
+        {% with form.abn as field %}{% include 'form_field.html' %}{% endwith %}
+    </div>
+
     <div class="col-md-6 col-8">
         {% with form.bank_bsb as field %}{% include 'form_field.html' %}{% endwith %}
     </div>
@@ -24,7 +28,7 @@
     </div>
 
     <div class="col text-end">
-        <input class="btn btn-primary my-3" type="submit" name="submit" value="Save & finish">
+        <input class="btn btn-primary my-3" type="submit" name="submit" value="Save">
     </div>
 </form>
 </div>

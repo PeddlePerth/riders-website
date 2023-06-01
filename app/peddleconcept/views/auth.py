@@ -96,6 +96,11 @@ def rider_login_verify_view(request):
 
 
 class MyLoginView(auth_views.LoginView):
+    def get(self, request, *args, **kwargs):
+        if 'rider_setup_state' in request.session:
+            return HttpResponseRedirect(reverse('rider_setup_begin'))
+        return super().get(request, *args, **kwargs)
+
     def form_valid(self, form):
         """ User auth is valid, check for linked person then login """
         try:

@@ -7,7 +7,6 @@ from peddleconcept.models.people import MOBILE_PHONE_REGEX, BSB_REGEX, BANK_ACCT
 from accounts.models import PeddleUser
 from django.core.exceptions import ValidationError
 from django.db.models import Q
-
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -35,13 +34,15 @@ class PersonFormMixin:
             return Q()
 
     def clean_email(self):
-        data = self.cleaned_data.get('email', '').strip()
+        data = self.cleaned_data.get('email') or ''
+        data = data.strip()
         if Person.objects.filter(Q(email=data) & self.get_instance_filter()).count() > 0:
             raise ValidationError('Email address already in use')
         return data
 
     def clean_phone(self):
-        data = self.cleaned_data.get('phone', '').strip()
+        data = self.cleaned_data.get('phone') or ''
+        data = data.strip()
         if not MOBILE_PHONE_REGEX.fullmatch(data):
             raise ValidationError('Please provide a valid Australian mobile phone number')
         if Person.objects.filter(Q(phone=data) & self.get_instance_filter()).count() > 0:
@@ -49,25 +50,26 @@ class PersonFormMixin:
         return data
     
     def clean_display_name(self):
-        data = self.cleaned_data.get('display_name', '').strip()
+        data = self.cleaned_data.get('display_name') or ''
+        data = data.strip()
         if Person.objects.filter(Q(display_name=data) & self.get_instance_filter()).count() > 0:
             raise ValidationError('Display name already in use, please choose another one')
         return data
 
     def clean_bank_bsb(self):
-        data = self.cleaned_data.get('bank_bsb', '')
+        data = self.cleaned_data.get('bank_bsb') or ''
         if not BSB_REGEX.fullmatch(data):
             raise ValidationError('BSB must be exactly 6 digits')
         return data
 
     def clean_bank_acct(self):
-        data = self.cleaned_data.get('bank_acct', '')
+        data = self.cleaned_data.get('bank_acct') or ''
         if not BANK_ACCT_REGEX.fullmatch(data):
             raise ValidationError('Must be a number between 4 and 20 digits')
         return data
 
     def clean_abn(self):
-        data = self.cleaned_data.get('abn', '')
+        data = self.cleaned_data.get('abn') or ''
         if not data:
             return ''
         if not (valid := abn.validate(data)):
@@ -80,21 +82,21 @@ class PersonProfileForm(PersonFormMixin, forms.ModelForm):
     """ Personal details profile form: changes to email address will require 2-step verification """
     class Meta:
         model = Person
-        fields = ('first_name', 'last_name', 'display_name', 'phone', 'abn')
+        fields = ('first_name', 'last_name', 'display_name', 'phone')
 
     first_name = forms.CharField(required=True, max_length=100)
     last_name = forms.CharField(required=True, max_length=100)
     display_name = forms.CharField(required=True, max_length=20)
     phone = forms.CharField(required=True, max_length=30, label='Mobile phone')
     email = forms.EmailField(required=True, max_length=255, label='Email address')
-    abn = forms.CharField(required=False, max_length=20, label='Your ABN - if you have one')
 
 class PayrollProfileForm(PersonFormMixin, forms.ModelForm):
     """ Payroll profile update form: sends an email notification to rider if changes are made """
     class Meta:
         model = Person
-        fields = ('bank_bsb', 'bank_acct')
+        fields = ('abn', 'bank_bsb', 'bank_acct')
 
+    abn = forms.CharField(required=False, max_length=20, label='Your ABN - if you have one')
     bank_bsb = forms.CharField(required=True, max_length=7, label='Bank BSB')
     bank_acct = forms.CharField(required=True, max_length=20, label='Bank Account Number')
 
@@ -113,12 +115,13 @@ class AuthCodeForm(forms.Form):
 class RiderSetupBeginForm(forms.ModelForm):
     class Meta:
         model = Person
-        fields = ('first_name', 'last_name', 'email')
+        fields = ('first_name', 'last_name', 'phone', 'email')
     
     first_name = forms.CharField(required=True, max_length=100, label='Your first name')
     last_name = forms.CharField(required=True, max_length=100, label='Your surname')
     email = forms.EmailField(required=True, max_length=255, label='Your best email address')
-    
+    phone = forms.CharField(required=True, max_length=30, label='Your phone number')
+
     def clean(self):
         # check for existing person with same name and/or email:
         # - if a Person is found with signup incomplete, adopt that user as this form's instance
@@ -128,6 +131,7 @@ class RiderSetupBeginForm(forms.ModelForm):
         fname = cleaned_data.get('first_name', '').strip()
         lname = cleaned_data.get('last_name', '').strip()
         email = cleaned_data.get('email', '').strip()
+        phone = cleaned_data.get('phone', '').strip()
 
         if not self.instance.id:
             try:
@@ -145,7 +149,7 @@ class RiderSetupBeginForm(forms.ModelForm):
                 pass
 
         filter_users = Q(first_name__iexact = fname, last_name__iexact = lname) | Q(email__iexact = email)
-        filter_persons = filter_users & Q(signup_status='complete')
+        filter_persons = (filter_users | Q(phone__iexact = phone)) & Q(signup_status='complete')
         if self.instance.id:
             filter_persons &= ~Q(id=self.instance.id)
             if self.instance.user:
@@ -158,16 +162,15 @@ class RiderSetupBeginForm(forms.ModelForm):
             logger.warning('rider_setup_begin got %d conflicting PeddleUsers, %d conflicting Persons for: (%s, %s, %s)' % (
                 num_users, num_ppl, fname, lname, email
             ))
-            raise ValidationError('Existing user with same name or email.')
+            raise ValidationError('Existing user with same name, email or phone number.')
         
         return cleaned_data
         
 class RiderSetupProfileForm(PersonFormMixin, forms.ModelForm):
     class Meta:
         model = Person
-        fields = ('phone', 'display_name', 'abn', 'bank_bsb', 'bank_acct')
+        fields = ('display_name', 'abn', 'bank_bsb', 'bank_acct')
     
-    phone = forms.CharField(required=True, max_length=30, label='Your phone number')
     display_name = forms.CharField(required=True, max_length=20, label='Short display name - your preferred name or initials')
     abn = forms.CharField(required=False, max_length=20, label='Your ABN - if you have one')
     bank_bsb = forms.CharField(required=True, max_length=7, label='Bank Account BSB')

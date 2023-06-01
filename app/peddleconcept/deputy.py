@@ -129,7 +129,7 @@ def sync_deputy_people(dry_run=False, no_add=True, match_only=False, company_id=
     num_added = num_unchanged = num_updated = 0
     
     for pers in Person.objects.all():
-        if pers.source_row_state == 'live' and pers.source_row_id:
+        if pers.source_row_id:
             db_people_by_srid[pers.source_row_id] = pers
         else:
             name_key = person_name_key(pers)
@@ -146,6 +146,8 @@ def sync_deputy_people(dry_run=False, no_add=True, match_only=False, company_id=
         if emp.source_row_id in db_people_by_srid:
             # already have matching row using Deputy Employee ID
             found_pers = db_people_by_srid.pop(emp.source_row_id)
+            if found_pers.source_row_state != 'none':
+                found_pers.source_row_state = 'live'
         elif name_key in db_people_by_name:
             found_pers = db_people_by_name.pop(name_key)
             found_pers.source_row_id = emp.source_row_id
@@ -181,7 +183,8 @@ def sync_deputy_people(dry_run=False, no_add=True, match_only=False, company_id=
                 found_pers.save()
 
     for pers in db_people_by_srid.values():
-        pers.active = False # deactivate deleted employees automatically
+        # deactivate deleted employees automatically
+        pers.update_field('active', False, source='deputy')
         if (chglog := pers.mark_source_deleted()):
             changelogs.append(chglog)
         if not dry_run:
@@ -190,7 +193,8 @@ def sync_deputy_people(dry_run=False, no_add=True, match_only=False, company_id=
     for pers in db_people_by_name.values():
         chg = False
         if pers.active:
-            pers.active = False # non-deputy employees are automatically inactivated
+            # non-deputy employees are automatically inactivated
+            pers.update_field('active', False, source='deputy')
             chg = True
         if (chglog := pers.mark_source_deleted()):
             changelogs.append(chglog)

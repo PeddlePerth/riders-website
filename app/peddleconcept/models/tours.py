@@ -235,7 +235,7 @@ class TourVenue(MutableDataRecord):
         verbose_name = 'Tour Venue (Advanced)'
         verbose_name_plural = 'Tour Venues (Advanced)'
 
-    MUTABLE_FIELDS = ('venue', 'time_arrive', 'time_depart', 'notes')
+    MUTABLE_FIELDS = ('time_arrive', 'time_depart', 'notes')
     ACTIVITY_CHOICES = [ (x, x) for x in ('venue', 'transit', 'activity')]
 
     venue = models.ForeignKey(Venue, on_delete=models.CASCADE, related_name='tours', null=True, blank=True)

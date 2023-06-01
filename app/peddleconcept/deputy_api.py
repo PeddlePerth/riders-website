@@ -20,7 +20,7 @@ class DeputyAPI:
         self.token = deputy_conf.get('auth_token')
         self.endpoint = deputy_conf.get('deputy_endpoint_url')
         self.default_company_id = deputy_conf.get('default_company_id')
-        self.default_employee_role = deputy_conf.get('default_employee_role_id')
+        self.default_employee_role_id = deputy_conf.get('default_employee_role_id')
 
         if not self.token:
             logger.error('Deputy API cannot be used without endpoint and auth token: make sure %s is configured in Settings' % 
@@ -71,48 +71,68 @@ class DeputyAPI:
 
     def add_employee(self, person, send_invite=True):
         if person.source_row_id:
-            logger.warning('Bad attempt to add an employee for Person %d with SRID=%s' % (
+            if self.request:
+                messages.error(self.request, '%s already has a Deputy account' % person.name)
+            logger.warning('Bad attempt to add an employee for Person %s with SRID=%s' % (
                 person.pk, person.source_row_id)
             )
-            return
-        elif not person.active:
-            logger.warning('Ignoring add_employee for inactive Person %d' % person.pk)
-            return
+            return False
         
-        logger.info('Adding person "%s" id %d to Deputy. Send invite: %s' % (
+        logger.info('Adding person "%s" id %s to Deputy. Send invite: %s' % (
             person.name, person.pk, send_invite))
-        resp = self.post('api/management/v2/employees', {
+
+        contact = {}
+        if person.email:
+            contact['email1'] = person.email
+        if person.phone:
+            contact['phone1'] = person.phone
+        data = {
             "data": {
                 "firstName": person.first_name,
                 "lastName": person.last_name,
                 "displayName": person.display_name,
-                "position": self.default_employee_role_id,
+                "position": "Employee",
                 "primaryLocation": {
                     "id": self.default_company_id,
                 },
-                "contact": {
-                    "email1": person.email,
-                    "phone1": person.phone,
-                },
+                "contact": contact,
                 "user": {
                     "sendInvite": send_invite,
                 },
             }
-        })
+        }
+        logger.debug(json.dumps(data))
+        resp = self.post('api/management/v2/employees', data)
 
         if not isinstance(resp, dict) or resp.get('success') != True:
             logger.warning("Bad response for Deputy add_employee: '%s'" % json.dumps(resp))
-            return
+            try:
+                error = resp.get('error').get('message')
+                if self.request:
+                    messages.error(self.request, "Could not add Deputy employee %s: %s" % (
+                        person.name, error,
+                    ))
+            except:
+                if self.request:
+                    messages.error(self.request, "Unexpected/invalid response from Deputy")
+            return False
 
         try:
             person.source_row_id = resp.get('result').get('data').get('id')
             person.source_row_state = 'live'
+            logger.info('Created Deputy employee for Person id %s with Deputy ID %s' % (
+                person.pk, person.source_row_id,
+            ))
+            person.save()
+            if self.request:
+                messages.success(self.request, 'Deputy invitation sent to %s (employee ID %s)' % (
+                    person.email, person.source_row_id))
+            return True
         except:
+            if self.request:
+                messages.error(self.request, "Unexpected/invalid response from Deputy")
             logger.warning("cannot get JSON attribute result.data.id for new Employee: data='%s'" % json.dumps(resp))
-            return
-        
-        return person
-
+            return False
 
     @transaction.atomic
     def update_areas(self, areas):

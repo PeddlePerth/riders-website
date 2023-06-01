@@ -63,6 +63,7 @@ def parse_employee_json(data):
         active = bool(data.get('Active')),
         phone = data.get('Mobile') or None,
         email = data.get('Email') or None,
+        email_verified = True,
         updated = parse_datetime_str(data.get('Modified')),
     )
     person.active_deputy = data.get('Active') == True and data.get('Status') != 0 and data.get('AllowLogin') == True

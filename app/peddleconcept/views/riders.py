@@ -20,6 +20,7 @@ from peddleconcept.forms import (
 )
 from peddleconcept.email import send_account_auth_email, validate_auth_token, send_payroll_change_email
 from .decorators import require_person_or_user, get_rider_setup_redirect, require_null_person
+from peddleconcept.deputy_api import DeputyAPI
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,9 @@ def rider_profile_view(request):
 
 @require_person_or_user(person=True)
 def rider_profile_edit_view(request):
+    if request.person.has_deputy_account:
+        messages.error(request, "Please edit your personal details via the Deputy app")
+        return HttpResponseRedirect(reverse('my_profile'))
     if request.method == 'POST':
         form = PersonProfileForm(request.POST, instance=request.person)
         if form.is_valid():
@@ -113,7 +117,10 @@ def rider_profile_edit_payroll_view(request):
 
 @require_null_person
 def rider_token_login_migrate_view(request, token=None):
-    """ Riders accessing the website using an old URL are sent to enter/confirm and verify their email """
+    """
+    Riders accessing the website using an old URL are sent to enter/confirm and verify their email.
+    For riders already linked to Deputy accounts - login and delete the token.
+    """
     try:
         ptoken = PersonToken.objects.get(
             action = 'rider_login_migrated',
@@ -121,7 +128,7 @@ def rider_token_login_migrate_view(request, token=None):
         )
     except (PersonToken.DoesNotExist, PersonToken.MultipleObjectsReturned):
         pass
-    
+
     if ptoken is None or not ptoken.is_valid():
         logger.error('Failed token login with token="%s"' % request.POST['token'])
         messages.error(request, 'Please login using your email address instead.')
@@ -130,7 +137,17 @@ def rider_token_login_migrate_view(request, token=None):
         logger.error('Token login failed: account incomplete or disabled')
         request.person = ptoken.person
         return get_rider_setup_redirect(request)
+    elif ptoken.person.has_deputy_account:
+        logger.warning('Token login from user with Deputy account: %s' % ptoken.person.name)
+        request.session['person_id'] = str(ptoken.person.id)
+        messages.success(request, 'Now logged in as %s. Use your email address %s to login next time!' % (
+            ptoken.person.name, ptoken.person.email))
+        ptoken.person.signup_status = 'complete'
+        ptoken.person.save()
+        ptoken.delete()
+        return HttpResponseRedirect(reverse('my_profile'))
     
+    logger.info('Successful token login from person: %s' % ptoken.person.name)
     request.session['person_id'] = str(ptoken.person.id)
     messages.success(request, 'Now logged in as %s' % ptoken.person.name)
     return HttpResponseRedirect(reverse('rider_migrate_begin'))
@@ -138,7 +155,7 @@ def rider_token_login_migrate_view(request, token=None):
 @require_person_or_user(person=True)
 def rider_migrate_begin_view(request):
     """ Require user to enter/confirm and verify email address before continuing """
-    if request.person.signup_status != 'migrated':
+    if request.person.signup_status != 'migrated' or request.person.has_deputy_account:
         messages.success('Please edit your profile using the My Profile page.')
         return HttpResponseRedirect(reverse('my_profile'))
 
@@ -146,7 +163,7 @@ def rider_migrate_begin_view(request):
         form = RiderSetupBeginForm(request.POST, instance=request.person)
         if form.is_valid():
             # don't save the ModelForm - store values in session, same as rider_setup_begin_view
-            for x in ('first_name', 'last_name', 'email'):
+            for x in ('first_name', 'last_name', 'email', 'phone'):
                 request.session['rider_%s' % x] = form.cleaned_data[x]
 
             # redirect to verify email
@@ -177,16 +194,32 @@ def rider_migrate_verify_view(request):
     obj = request.person
     if request.method == 'POST':
         if 'resend' in request.POST:
-            send_account_auth_email(request, obj.name, obj.email)
+            if obj.has_deputy_account:
+                send_account_auth_email(request, obj.name, obj.email)
+            else:
+                send_account_auth_email(request, request.session['rider_first_name'], request.session['rider_email'])
             form = AuthCodeForm()
         else:
             form = AuthCodeForm(data=request.POST)
             if form.is_valid():
                 if validate_auth_token(request, form.cleaned_data['auth_code']):
                     # create the new Person object and populate with data stored in session
-                    obj.fname = request.session.pop('rider_first_name')
-                    obj.lname = request.session.pop('rider_last_name')
-                    obj.email = request.session.pop('rider_email')
+                    if not obj.has_deputy_account:
+                        obj.fname = request.session.pop('rider_first_name')
+                        obj.lname = request.session.pop('rider_last_name')
+                        obj.email = request.session.pop('rider_email')
+                        obj.phone = request.session.pop('rider_phone')
+                        
+                        api = DeputyAPI()
+                        try:
+                            ok = api.add_employee(obj, send_invite=True)
+                        except:
+                            ok = False
+                        if ok:
+                            messages.success(request, 'Deputy invitation sent! Please check your email.')
+                        else:
+                            messages.error(request, 'Error creating Deputy account! Please contact an administrator')
+
                     obj.last_seen = timezone.now()
                     obj.email_verified = True
                     obj.signup_status = 'complete'
@@ -207,7 +240,7 @@ def rider_migrate_verify_view(request):
         form = AuthCodeForm()
 
     return render(request, 'rider_setup_verify.html', {
-        'user_email': request.session['rider_email'],
+        'user_email': request.session['rider_email'] if not request.person.has_deputy_account else request.person.email,
         'form_errors': form.non_field_errors(),
         'form': get_form_fields(form),
     })
@@ -240,17 +273,17 @@ def rider_setup_begin_view(request):
 
     # check if we are in a diferent part of the procedure, and redirect accordingly
     if state == 'verify':
-        messages.warning('Redirected')
+        messages.warning(request, 'Redirected to verification step')
         return HttpResponseRedirect(reverse('rider_setup_verify'))
     elif state == 'final':
-        messages.warning('Redirected')
+        messages.warning(request, 'Redirected to final step')
         return HttpResponseRedirect(reverse('rider_setup_final'))
     
     if request.method == 'POST':
         form = RiderSetupBeginForm(request.POST)
         if form.is_valid():
             # don't save the ModelForm - store values in session, same as rider_migrate_begin_view
-            for x in ('first_name', 'last_name', 'email'):
+            for x in ('first_name', 'last_name', 'email', 'phone'):
                 request.session['rider_%s' % x] = form.cleaned_data[x]
 
             if send_account_auth_email(request, form.cleaned_data['first_name'], form.cleaned_data['email']):
@@ -265,6 +298,15 @@ def rider_setup_begin_view(request):
         'form': get_form_fields(form),
         'form_errors': form.non_field_errors(),
     })
+
+def find_unique_display_name(dname):
+    all_dnames = set(Person.objects.all().values_list('display_name', flat=True))
+    n = 1
+    try_dname = dname
+    while try_dname in all_dnames:
+        try_dname = dname + str(n)
+        n += 1
+    return try_dname
 
 @require_null_person
 def rider_setup_verify_view(request):
@@ -287,24 +329,44 @@ def rider_setup_verify_view(request):
             if form.is_valid():
                 if validate_auth_token(request, form.cleaned_data['auth_code']):
                     # create the new Person object and populate with data stored in session
-                    fname = request.session.pop('rider_first_name')
-                    lname = request.session.pop('rider_last_name')
+                    fname = request.session['rider_first_name']
+                    lname = request.session['rider_last_name']
+                    disp_name = fname.title() + ' ' + "".join((n[0].upper() for n in lname.split(' ') if len(n) > 0))
+    
                     obj = Person(
                         first_name = fname,
                         last_name = lname,
-                        display_name = fname.title() + ' ' + "".join((n[0].upper() for n in lname.split(' ') if len(n) > 0)),
-                        email = request.session.pop('rider_email'),
+                        display_name = find_unique_display_name(disp_name),
+                        email = request.session['rider_email'],
+                        phone = request.session['rider_phone'],
                         email_verified = True,
                         active = False,
                         signup_status = 'confirmed',
                         rider_class = 'rider_probationary',
                         last_seen = timezone.now(),
                     )
-                    obj.save()
 
-                    request.session['rider_setup_state'] = 'final'
-                    request.session['person_id'] = str(obj.id)
-                    return HttpResponseRedirect(reverse('rider_setup_final'))
+                    obj.save()
+                    api = DeputyAPI(request=request)
+
+                    try:
+                        ok = api.add_employee(obj, send_invite=True)
+                        obj.save()
+                        request.session['rider_setup_state'] = 'final'
+                        request.session['person_id'] = str(obj.pk)
+                        for x in ['rider_first_name', 'rider_last_name', 'rider_email', 'rider_phone']:
+                            del request.session[x]
+                        return HttpResponseRedirect(reverse('rider_setup_final'))
+                    except Exception as e:
+                        logger.warning('Error adding Deputy employee: %s: %s' % (
+                            str(type(e)), str(e),
+                        ))
+                        ok = False
+                    if ok:
+                        messages.success(request, 'Deputy invitation sent! Please check your email.')
+                    else:
+                        messages.error(request, 'Error creating Deputy account! Please contact an administrator.')
+
                 else:
                     form.add_error('auth_code', 'Invalid authentication code or code expired. Please try again.')
     else:

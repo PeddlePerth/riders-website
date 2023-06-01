@@ -8,7 +8,10 @@ SESSION_MIN_AGE = getattr(settings, 'SESSION_COOKIE_AGE', 3600*24*14) // 2
 def logout_all_session(request):
     """ Clear all Person-related workflow data and logout any User from the current browsing session """
     logout(request)
-    for x in ['person_id', 'person_setup', 'person_setup_stage', 'auth_person_id']:
+    for x in [
+        'person_id', 'person_setup', 'person_setup_stage', 'auth_person_id', 'rider_setup_state',
+        'rider_first_name', 'rider_last_name', 'rider_email', 'rider_phone',
+    ]:
         if x in request.session:
             del request.session[x]
 

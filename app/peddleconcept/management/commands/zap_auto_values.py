@@ -17,7 +17,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, overwrite_existing=False, **options):
         # changed the code at some point for this to break things, need to adjust the data manually
-        models = (Tour, Session, RiderPaySlot, TourRider, TourVenue)
+        models = (Tour, Session, RiderPaySlot, TourRider, TourVenue, Person, Area)
         with transaction.atomic():
             for m in models:
                 num_records = 0

@@ -22,6 +22,9 @@
             {% with form.last_name as field %}{% include 'form_field.html' %}{% endwith %}
         </div>
         <div class="col-12 mt-3">
+            {% with form.phone as field %}{% include 'form_field.html' %}{% endwith %}
+        </div>
+        <div class="col-12 mt-3">
             {% with form.email as field %}{% include 'form_field.html' %}{% endwith %}
             <p class="form-text">
                 You'll need to use your email address when you log in so please make sure you can access it easily.

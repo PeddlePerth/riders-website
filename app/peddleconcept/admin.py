@@ -8,6 +8,7 @@ from .models import *
 from .actions import download_as_csv
 
 from admin_action_buttons.admin import ActionButtonsMixin
+from peddleconcept.deputy_api import DeputyAPI
 
 class MyJSONFormField(forms.JSONField):
     def prepare_value(self, value):
@@ -107,7 +108,7 @@ class PersonAdmin(MyModelAdmin):
         'override_pay_rate', 'email', 'phone', 'last_seen',)
     list_filter = ('active', 'source_row_state', 'email_verified', 'rider_class', 'is_core_rider', 'override_pay_rate')
     ordering = ['-active', '-rider_class']
-    actions = ['disable_selected', 'delete_selected']
+    actions = ['disable_selected', 'invite_deputy']
     search_fields = ('display_name', 'first_name', 'last_name', 'email')
 
     @admin.action(description='Disable selected accounts')
@@ -119,7 +120,25 @@ class PersonAdmin(MyModelAdmin):
     def rider_status_html(self, obj):
         return render_to_string('admin/person_rider_status.html', { 'obj': obj })
 
-
+    @admin.action(description='Invite selected to Deputy')
+    def invite_deputy(self, request, queryset):
+        api = DeputyAPI(request=request)
+        for obj in queryset:
+            if obj.has_deputy_account:
+                messages.error(request, '%s already has a Deputy account' % obj.name)
+                continue
+            try:
+                api.add_employee(obj, send_invite=True)
+            except Exception as e:
+                messages.error(request, "Error adding %s to Deputy: %s: %s" % (
+                    obj.name, type(e).__name__, str(e),
+                ))
+        
+    def has_delete_permission(self, request, obj=None):
+        if obj is None:
+            return False
+        return super().has_delete_permission(request, obj)
+        
 @admin.register(PersonToken)
 class PersonTokenAdmin(MyModelAdmin):
     list_display = (

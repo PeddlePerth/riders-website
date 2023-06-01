@@ -40,7 +40,7 @@ def send_account_auth_email(request, name, email):
         ok = send_mail(
             'Your Peddle Riders Code is: %s' % token,
             render_to_string('email/email_auth.txt', ctx),
-            getattr(settings, 'EMAIL_FROM'),
+            getattr(settings, 'DEFAULT_FROM_EMAIL'),
             [email],
             html_message = render_to_string('email/email_auth.html', ctx),
         )
@@ -50,7 +50,9 @@ def send_account_auth_email(request, name, email):
         messages.success(request, 'Authentication code sent. Please check your inbox.')
     except SMTPException as e:
         logger.error('Error sending email: %s: %s' % (type(e), e))
-        messages.error(request, 'Error sending auth code email. Check your details are correct and try again. (%s)' % (str(type(e))))
+        messages.error(request, 
+        'Error sending auth code email. Check your details are correct and try again. (%s)' % (
+            type(e).__name__))
         ok = False
     
     return bool(ok)
@@ -80,7 +82,7 @@ def send_payroll_change_email(person):
         ok = send_mail(
             'Peddle payroll details updated',
             render_to_string('email/payroll_change.txt', ctx),
-            getattr(settings, 'EMAIL_FROM'),
+            getattr(settings, 'DEFAULT_FROM_EMAIL'),
             [person.email],
             html_message = render_to_string('email/payroll_change.html', ctx),
         )

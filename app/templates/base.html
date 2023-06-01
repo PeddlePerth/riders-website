@@ -131,13 +131,13 @@
         {% endif %}
         {% endif %}
         {% endblock %}
+        {% block profilemsg %}
         <ul class="messagelist">
-            {% block profilemsg %}
             {% if request.person.exists and not request.person.profile_complete %}
                 <li class="error">Your Rider Profile is incomplete - please <a href="{% url 'my_profile' %}">add your missing details.</a></li>
             {% endif %}
-            {% endblock %}
-            </ul>
+        </ul>
+        {% endblock %}
         {% block basemessages %}
         {% if messages %}
         <ul class="messagelist">

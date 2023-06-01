@@ -5,16 +5,15 @@
 </div>
 {% endif %}
 
-{% if obj.active %}
 <div>
-<span class="badge bg-success me-1 mb-1">Active</span>
-{% if obj.has_deputy_account %}<span class="badge bg-info me-1 mb-1">In Deputy</span>{% endif %}
+    {% if obj.active %}<span class="badge bg-success me-1 mb-1">Active</span>
+    {% else %}<span class="badge bg-secondary me-1 mb-1">Archived</span>{% endif %}
+    {% if obj.has_deputy_account %}<span class="badge bg-info me-1 mb-1">In Deputy</span>{% endif %}
 </div>
 <div>
-{% if obj.rider_class %}
+{% if obj.rider_class and obj.active %}
 {% if obj.is_core_rider %}<span class="badge bg-danger me-1 mb-1">Core Rider</span>{% endif %}
-<span class="badge bg-primary me-1 mb-1">{{ obj.rider_class_label }}</span>
-{% endif %}
+<div class="fw-bold me-1 mb-1">{{ obj.rider_class_label }}</div>
 {% else %}
 <span class="badge bg-secondary me-1 mb-1">Not a rider</span>
 {% endif %}

@@ -5,15 +5,15 @@ from django.urls import reverse
 from peddleconcept.middleware import logout_all_session
 
 def get_rider_setup_redirect(request):
-    if not request.person.active:
-        logout_all_session(request)
-        messages.error(request, "Your account has been disabled, please contact the administrator")
-    elif request.person.signup_status == 'confirmed':
+    if request.person.signup_status == 'confirmed':
         messages.info(request, 'Your account is not fully set up. Please complete your profile to continue.')
         return HttpResponseRedirect(reverse('rider_setup_final'))
     elif request.person.signup_status == 'migrated':
         messages.info(request, 'Please confirm your details to continue.')
         return HttpResponseRedirect(reverse('rider_migrate_begin'))
+    elif not request.person.active:
+        logout_all_session(request)
+        messages.error(request, "Your account has been disabled, please contact the administrator")
     else:
         # Anything else: redirect to login
         pass
