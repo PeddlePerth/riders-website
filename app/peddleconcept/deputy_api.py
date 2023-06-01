@@ -60,6 +60,59 @@ class DeputyAPI:
             })
 
         return ( parse_operationalunit_json(ou) for ou in resp )
+    
+    def query_all_employees(self):
+        resp = self.get('api/v1/supervise/employee')
+
+        return (
+            parse_employee_json(obj) for obj in resp
+            if obj.get('Company') == self.default_company_id
+        )
+
+    def add_employee(self, person, send_invite=True):
+        if person.source_row_id:
+            logger.warning('Bad attempt to add an employee for Person %d with SRID=%s' % (
+                person.pk, person.source_row_id)
+            )
+            return
+        elif not person.active:
+            logger.warning('Ignoring add_employee for inactive Person %d' % person.pk)
+            return
+        
+        logger.info('Adding person "%s" id %d to Deputy. Send invite: %s' % (
+            person.name, person.pk, send_invite))
+        resp = self.post('api/management/v2/employees', {
+            "data": {
+                "firstName": person.first_name,
+                "lastName": person.last_name,
+                "displayName": person.display_name,
+                "position": self.default_employee_role_id,
+                "primaryLocation": {
+                    "id": self.default_company_id,
+                },
+                "contact": {
+                    "email1": person.email,
+                    "phone1": person.phone,
+                },
+                "user": {
+                    "sendInvite": send_invite,
+                },
+            }
+        })
+
+        if not isinstance(resp, dict) or resp.get('success') != True:
+            logger.warning("Bad response for Deputy add_employee: '%s'" % json.dumps(resp))
+            return
+
+        try:
+            person.source_row_id = resp.get('result').get('data').get('id')
+            person.source_row_state = 'live'
+        except:
+            logger.warning("cannot get JSON attribute result.data.id for new Employee: data='%s'" % json.dumps(resp))
+            return
+        
+        return person
+
 
     @transaction.atomic
     def update_areas(self, areas):

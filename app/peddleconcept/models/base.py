@@ -76,7 +76,14 @@ class MutableDataRecord(models.Model):
     }
 
     CHANGE_SOURCES_CHOICES = [ (x, x) for x in CHANGE_SOURCES.keys() ]
-    SOURCE_ROW_STATE_CHOICES = [ (x, x) for x in ['live', 'deleted', 'none', 'pending']]
+    SOURCE_ROW_STATE_CHOICES = [ 
+        (x, x) for x in [
+            'live', # source row was last seen to exist with ID=source_row_id
+            'deleted', # source row was not found in last check - assume it was deleted remotely
+            'none', # source row may or may not exist with ID=source_row_id: match (as opposed to creating new row) but don't propagate changes
+            'pending', # local row created, pending creation of source row
+        ]
+    ]
 
     # Mutable fields are ones which can be modified by the user AND auto-updated, eg. whatever the thing should keep tabs on
     MUTABLE_FIELDS = ()

@@ -1,7 +1,7 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.forms.widgets import TextInput
 from django import forms
-from django.db import models
+from django.db import models, transaction
 from django.template.loader import render_to_string
 import json
 from .models import *
@@ -60,7 +60,7 @@ class SessionAdmin(MyModelAdmin):
     list_display = ('source_row_id', 'session_type', 'source', 'time_start', 'time_end', 'updated')
     list_filter = ('source', 'source_row_state', 'time_start', 'session_type')
     ordering = ['-time_start', 'session_type']
-
+    search_fields = ('source_row_id', 'session_type', )
 
 @admin.register(Venue)
 class VenueAdmin(MyModelAdmin):
@@ -103,9 +103,22 @@ class ChangeLogAdmin(MyModelAdmin):
 @admin.register(Person)
 class PersonAdmin(MyModelAdmin):
     list_display = (
-        'name', 'email', 'email_verified',
-        'rider_class', 'is_core_rider', 'override_pay_rate', 'active', 'last_seen', 'created')
+        '__str__', 'rider_status_html',
+        'override_pay_rate', 'email', 'phone', 'last_seen',)
     list_filter = ('active', 'source_row_state', 'email_verified', 'rider_class', 'is_core_rider', 'override_pay_rate')
+    ordering = ['-active', '-rider_class']
+    actions = ['disable_selected', 'delete_selected']
+    search_fields = ('display_name', 'first_name', 'last_name', 'email')
+
+    @admin.action(description='Disable selected accounts')
+    def disable_selected(self, request, queryset):
+        num_updated = queryset.update(active=False)
+        messages.success('%d riders disabled' % num_updated)
+
+    @admin.display(description='Rider Status')
+    def rider_status_html(self, obj):
+        return render_to_string('admin/person_rider_status.html', { 'obj': obj })
+
 
 @admin.register(PersonToken)
 class PersonTokenAdmin(MyModelAdmin):
@@ -125,7 +138,21 @@ class AreaAdmin(MyModelAdmin):
     ordering = ['sort_order']
     list_filter = ['active', 'deputy_sync_enabled']
     search_fields = ['tour_locations']
+    actions = ['disable_sync', 'enable_sync']
 
     @admin.display(description='Tour Pickup Locations')
     def tour_locations_html(self, obj):
         return render_to_string('admin/area_tour_locations.html', {'obj': obj})
+
+    @transaction.atomic
+    @admin.action(description='Disable Deputy sync')
+    def disable_sync(self, request, queryset):
+        """ mark objects as 'offline' whether or not there is a corresponding Deputy row """
+        num_update = 0
+        for obj in queryset:
+            if obj.source_row_state != 'none':
+                obj.source_row_state = 'none'
+                obj.save()
+                num_update += 1
+
+        messages.success(request, "Sync disabled for %d items" % num_update)

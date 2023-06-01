@@ -143,14 +143,12 @@ EMAIL_PORT = 465
 EMAIL_USE_SSL = True
 EMAIL_TIMEOUT = 10
 EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
-EMAIL_FROM = EMAIL_HOST_USER
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')
 
-REST_FRAMEWORK = {
-    'DEFAULT_PARSER_CLASSES': [
-        'rest_framework.parsers.JSONParser',
-    ]
-}
+# Google API settings
+GAUTH_CLIENT_ID = os.environ.get('GAUTH_CLIENT_ID')
+GAUTH_CLIENT_SECRET = os.environ.get('GAUTH_CLIENT_SECRET')
 
 LOGGING = {
     'version': 1,

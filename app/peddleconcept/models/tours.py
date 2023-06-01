@@ -15,6 +15,9 @@ class Area(MutableDataRecord):
     MUTABLE_FIELDS = (
         'area_name', 'colour', 'sort_order'
     )
+    source = models.CharField(max_length=50, blank=True,
+        choices = MutableDataRecord.CHANGE_SOURCES_CHOICES,
+        help_text = "External data source", default='deputy')
     area_name = models.CharField(max_length=200, blank=True, verbose_name='Area name in Deputy')
     display_name = models.CharField(max_length=200, blank=True, verbose_name='Area display name')
     colour = models.CharField(max_length=50, null=True, blank=True, verbose_name='Hex colour code')

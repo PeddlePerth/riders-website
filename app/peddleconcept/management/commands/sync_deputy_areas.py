@@ -12,7 +12,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
-    help = 'Reload tour areas based on keywords, with option to save and update DB'
+    help = 'Download and sync Deputy areas with existing database objects'
 
     def add_arguments(self, parser):
         pass

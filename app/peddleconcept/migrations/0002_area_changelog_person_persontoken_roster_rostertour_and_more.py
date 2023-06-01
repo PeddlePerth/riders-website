@@ -42,7 +42,10 @@ def make_riders_people(apps, schema_editor):
         person = Person(
             first_name = user.first_name,
             last_name = user.last_name,
-            display_name = user.display_name or '%s %s' % (user.first_name, user.last_name),
+            display_name = (
+                user.display_name or ('%s %s' % (user.first_name, user.last_name)).strip() or user.username
+                or '(no name)'
+            ),
             email = user.email or None,
             phone = user.phone or None,
             last_seen = user.last_login,

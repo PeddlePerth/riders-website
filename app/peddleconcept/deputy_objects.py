@@ -49,23 +49,24 @@ def make_operationalunit_json(area, company_id):
 
 def parse_employee_json(data):
     """
-    Parse JSON Employee data: https://developer.deputy.com/deputy-docs/docs/employee
+    Parse JSON Employee data (from supervise API)
+    See https://developer.deputy.com/deputy-docs/reference/getdetailsforallemployees
     """
-    contact = data.get('ContactObject', {})
-
-    return Person(
+    person = Person(
         source = 'deputy',
         source_row_state = 'live',
-        source_row_id = data.get('Id'),
+        source_row_id = str(data.get('Id')),
 
         first_name = data.get('FirstName'),
         last_name = data.get('LastName'),
         display_name = data.get('DisplayName'),
-        active = data.get('Active'),
-        phone = contact.get('Mobile') or contact.get('Phone1'),
-        email = contact.get('Email') or contact.get('Email1'),
+        active = bool(data.get('Active')),
+        phone = data.get('Mobile') or None,
+        email = data.get('Email') or None,
         updated = parse_datetime_str(data.get('Modified')),
     )
+    person.active_deputy = data.get('Active') == True and data.get('Status') != 0 and data.get('AllowLogin') == True
+    return person
 
 def parse_roster_json(data, people={}, areas={}):
     """ Parse Roster JSON: https://developer.deputy.com/deputy-docs/docs/roster """

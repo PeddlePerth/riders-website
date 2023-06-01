@@ -28,7 +28,7 @@ class Person(MutableDataRecord):
     class Meta:
         verbose_name_plural = 'People'
 
-    MUTABLE_FIELDS = ('first_name', 'last_name', 'display_name', 'active', 'phone', 'email')
+    MUTABLE_FIELDS = ('first_name', 'last_name', 'active', 'phone', 'email', 'email_verified')
     first_name = models.CharField(max_length=200)
     last_name = models.CharField(max_length=200)
     display_name = models.CharField(max_length=200, unique=True, null=True, verbose_name='Preferred Name', 
@@ -36,17 +36,16 @@ class Person(MutableDataRecord):
             'unique': 'Display name already taken',
             'blank': 'Display name cannot be blank',
         })
-    email = models.EmailField(unique=True, null=True, error_messages={
+    email = models.EmailField(unique=True, null=True, blank=True, error_messages={
         'unique': 'Email address already in use',
         'blank': 'You must enter an email address',
     })
     email_verified = models.BooleanField(blank=True, default=False)
-    phone = models.CharField(max_length=30, unique=True, null=True, verbose_name='Contact Phone Number',
+    phone = models.CharField(max_length=30, unique=True, null=True, blank=True, verbose_name='Contact Phone Number',
         error_messages={
             'unique': 'Phone number already taken',
             'blank': 'You must enter a phone number',
         },
-        validators = [RegexValidator(MOBILE_PHONE_REGEX, message='Please provide a valid Australian mobile phone number')],
     )
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
@@ -89,8 +88,12 @@ class Person(MutableDataRecord):
         fullname = ('%s %s' % (self.first_name, self.last_name)).strip()
         return fullname or self.display_name or (self.user.username if self.user else None) or '(no name)'
 
+    @property
+    def has_deputy_account(self):
+        return self.source_row_state == 'live' and self.source_row_id is not None
+
     def __str__(self):
-        return self.name
+        return '%s (%s)' % (self.name, self.pk)
 
     def can_login(self):
         return self.active and self.signup_status in ('complete', 'migrated')
