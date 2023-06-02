@@ -26,6 +26,7 @@ def parse_operationalunit_json(data):
         source_row_id = str(data.get('Id')),
 
         area_name = data.get('OperationalUnitName'),
+        display_name = data.get('OperationalUnitName'),
         colour = data.get('Colour'),
         sort_order = data.get('RosterSortOrder') or 0,
         updated = parse_datetime_str(data.get('Modified')),

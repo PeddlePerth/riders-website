@@ -17,30 +17,6 @@ from .decorators import require_person_or_user
 
 logger = logging.getLogger(__name__)
 
-def get_weekly_urls(tours_date):
-    """ Returns legacy tour schedule navigation URLs for each day in the week """
-    week_start = start_of_week(tours_date)
-    week_urls = [
-        {
-            'url': reverse('tours_for', args=[add_days(week_start, -1)]),
-            'title': '\u00ab',
-        },
-    ]
-    for i in range(7):
-        day = add_days(week_start, i)
-        week_urls.append({
-            'url': reverse('tours_for', args=[day]),
-            'title': day.strftime("%a %d/%m"),
-            'iso_date': day.isoformat(),
-        })
-    week_urls.append({
-        'url': reverse('tours_for', args=[add_days(week_start, 7)]),
-        'title': '\u00bb',
-    })
-    return week_urls
-
-
-
 @require_person_or_user(admin=True)
 def tour_pays_view(request, year_num=None, week_num=None, week_start=None):
     """ HTML view for Weekly Tour Pays """
@@ -59,7 +35,6 @@ def tour_pays_view(request, year_num=None, week_num=None, week_start=None):
     ctx = {
         'start_date': week_start.strftime("%a %d/%m/%Y"),
         'end_date': week_end.strftime("%a %d/%m/%Y"),
-        'week_urls': get_weekly_urls(week_start),
     }
 
     jsvars = {

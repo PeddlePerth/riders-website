@@ -78,9 +78,14 @@
                             <a class="nav-link active" href="{% url 'tours_rider_today' %}">My Tours</a>
                         </li>
                         {% endif %}
+                        {% for area in tour_areas %}
                         <li class="nav-item">
-                            <a class="nav-link active" href="{% url 'tours_today' %}">Tour Schedules</a>
+                            <a class="nav-link active tour-schedule-area px-1" 
+                                data-area-id="{{ area.id }}" style="background-color: {{ area.colour }};"
+                                href="{% url 'tours_today' tour_area_id=area.id %}">
+                                {{ area.display_name }}</a>
                         </li>
+                        {% endfor %}
                         <li class="nav-item">
                             <a class="nav-link active" href="{% url 'rider_list' %}">Rider Contacts</a>
                         </li>

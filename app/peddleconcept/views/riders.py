@@ -20,6 +20,7 @@ from peddleconcept.forms import (
 )
 from peddleconcept.email import send_account_auth_email, validate_auth_token, send_payroll_change_email
 from .decorators import require_person_or_user, get_rider_setup_redirect, require_null_person
+from .base import render_base
 from peddleconcept.deputy_api import DeputyAPI
 from peddleconcept.settings import get_setting_or_default
 
@@ -28,13 +29,13 @@ logger = logging.getLogger(__name__)
 @require_person_or_user()
 def rider_list_view(request):
     """ Rider Contacts page """
-    return render(request, 'rider_list.html', {
-        'riders': Person.objects.all(),
+    return render_base(request, 'rider_list', context={
+        'riders': Person.objects.filter(active=True),
     })
 
 @require_person_or_user(person=True)
 def rider_profile_view(request):
-    return render(request, 'rider_profile.html')
+    return render_base(request, 'rider_profile')
 
 @require_person_or_user(person=True)
 def rider_profile_edit_view(request):
@@ -57,7 +58,7 @@ def rider_profile_edit_view(request):
     else:
         form = PersonProfileForm(instance=request.person, initial={'email': request.person.email})
 
-    return render(request, 'rider_profile_edit.html', {
+    return render_base(request, 'rider_profile_edit', context={
         'form': get_form_fields(form),
         'form_errors': form.non_field_errors(),
     })
@@ -90,7 +91,7 @@ def rider_profile_verify_email_view(request):
     else:
         form = AuthCodeForm()
 
-    return render(request, 'rider_profile_verify_email.html', {
+    return render_base(request, 'rider_profile_verify_email', context={
         'email_old': obj.email,
         'email_new': request.session['rider_email'],
         'form_errors': form.non_field_errors(),
@@ -111,7 +112,7 @@ def rider_profile_edit_payroll_view(request):
     else:
         form = PayrollProfileForm(instance=request.person)
         
-    return render(request, 'rider_profile_edit_payroll.html', {
+    return render_base(request, 'rider_profile_edit_payroll', context={
         'form': get_form_fields(form),
         'form_errors': form.non_field_errors(),
     })
@@ -176,7 +177,7 @@ def rider_migrate_begin_view(request):
     else:
         form = RiderSetupBeginForm(instance=request.person)
 
-    return render(request, 'rider_migrate_begin.html', {
+    return render_base(request, 'rider_migrate_begin', context={
         'form': get_form_fields(form),
         'form_errors': form.non_field_errors(),
     })
@@ -233,7 +234,7 @@ def rider_migrate_verify_view(request):
     else:
         form = AuthCodeForm()
 
-    return render(request, 'rider_setup_verify.html', {
+    return render_base(request, 'rider_setup_verify', context={
         'user_email': request.session['rider_email'] if not request.person.has_deputy_account else request.person.email,
         'form_errors': form.non_field_errors(),
         'form': get_form_fields(form),
@@ -288,7 +289,7 @@ def rider_setup_begin_view(request):
     else:
         form = RiderSetupBeginForm()
 
-    return render(request, 'rider_setup_begin.html', {
+    return render_base(request, 'rider_setup_begin', context={
         'form': get_form_fields(form),
         'form_errors': form.non_field_errors(),
     })
@@ -366,7 +367,7 @@ def rider_setup_verify_view(request):
     else:
         form = AuthCodeForm()
 
-    return render(request, 'rider_setup_verify.html', {
+    return render_base(request, 'rider_setup_verify', context={
         'user_email': request.session.get('rider_email'),
         'form_errors': form.non_field_errors(),
         'form': get_form_fields(form)}
@@ -400,7 +401,7 @@ def rider_setup_final_view(request):
     else:
         form = RiderSetupProfileForm(instance=request.person)
 
-    return render(request, 'rider_setup_final.html', {
+    return render_base(request, 'rider_setup_final', context={
         'form_errors': form.non_field_errors(),
         'form': get_form_fields(form)
     })

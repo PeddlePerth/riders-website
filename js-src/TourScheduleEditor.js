@@ -170,12 +170,6 @@ class TourScheduleEditor extends React.Component {
         return [riderTimes, conflictRiders, schedRiders];
     } 
 
-    onSaveBtn(event, goBack) {
-        this.saveData(function() {
-            if (goBack) window.location.href = window.jsvars.urls.tours_for;
-        });
-    }
-
     // handle text data changes to tour rows
     onDataChange(row_id, field_name, value) {
         this.props.tours[row_id][field_name] = value;

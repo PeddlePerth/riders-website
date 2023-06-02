@@ -14,6 +14,7 @@ from .tours_admin import (
 from .tours import (
     schedules_view,
     rider_schedules_view,
+    rider_tours_data_view,
     tours_data_view,
 )
 

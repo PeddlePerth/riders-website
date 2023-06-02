@@ -5,7 +5,7 @@ from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 from django.urls import reverse
 from django.utils import timezone
-from django.http import HttpResponseRedirect, HttpResponseBadRequest, JsonResponse
+from django.http import HttpResponseRedirect, HttpResponseBadRequest, JsonResponse, HttpResponse
 
 from peddleconcept.util import (
     get_date_filter, get_iso_date, json_datetime, from_json_date, from_json_date,
@@ -16,29 +16,37 @@ from peddleconcept.tours.schedules import (
 )
 from peddleconcept.tours.rezdy import update_from_rezdy
 from peddleconcept.tours.fringe import update_from_fringe
+from peddleconcept.models import Area
 
 from .base import render_base
 from .decorators import staff_required
+from .tours import get_schedule_or_redirect
 
 @user_passes_test(staff_required)
-def schedule_editor_view(request, tours_date=None):
+def schedule_editor_view(request, tour_area_id=None, tours_date=None):
     """ HTML View for Tour Schedule Editor """
-    if not (tours_date := get_iso_date(tours_date)):
-        return HttpResponseRedirect(reverse('tours_today'))
+    res = get_schedule_or_redirect(tour_area_id, tours_date)
+    if isinstance(res, HttpResponse):
+        return res
+    else:
+        tours_date, tour_area = res
 
     date_filter = get_date_filter(tours_date, tours_date, 'time_start')
 
     ctx = {
         'date': tours_date,
+        'tour_area': tour_area,
     }
 
     jsvars = {
         'urls': {
             'tour_sched_data': reverse('tour_sched_data'),
-            'tours_for': reverse('tours_for', args=[tours_date]),
+            'tours_for': reverse('tours_for', kwargs={'tour_area_id': 'AREA_ID', 'tours_date': 'DATE'}),
         },
+        'tour_areas': { area.id: area.to_json() for area in Area.objects.filter(active=True) },
         'admin_url': reverse('admin:peddleconcept_tour_change', args=['TOUR_ID']),
         'tours_date': json_datetime(tours_date),
+        'tour_area_id': tour_area.id,
     }
     return render_base(request, 'schedules_editor', react=True, context=ctx, jsvars=jsvars)
 
@@ -55,9 +63,10 @@ def schedules_dashboard_view(request, tours_date=None):
     jsvars = {
         'date': json_datetime(today),
         'data_url': reverse('tour_dashboard_data'),
+        'tour_areas': { area.id: area.to_json() for area in Area.objects.filter(active=True) },
         'report_url': reverse('tour_pays', kwargs={'week_start': 'DATE'}),
-        'view_url': reverse('tours_for', kwargs={'tours_date': 'DATE'}),
-        'edit_url': reverse('tour_sched_edit', kwargs={'tours_date': 'DATE'}),
+        'view_url': reverse('tours_for', kwargs={'tour_area_id': 'AREA_ID', 'tours_date': 'DATE'}),
+        'edit_url': reverse('tour_sched_edit', kwargs={'tour_area_id': 'AREA_ID', 'tours_date': 'DATE'}),
         'update_url': reverse('update_tours'),
         'venues_report_url': reverse('venues_report', kwargs={'week_start': 'DATE'}),
         'last_scan_begin': json_datetime(last_scan_begin),

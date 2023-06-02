@@ -17,6 +17,7 @@ function load_schedule_editor() {
     const container = document.getElementById("schedule-content");
     const extraPostData = {
         tours_date: window.jsvars.tours_date,
+        tour_area_id: window.jsvars.tour_area_id,
     };
 
     ReactDOM.render(
@@ -102,7 +103,10 @@ function load_tour_dashboard(selected) {
 
 function load_tour_schedules() {
     const container = document.getElementById('schedule-content');
+
     ReactDOM.render(<TourScheduleViewer
+        initialAreaId={window.jsvars.tour_area_id}
+        tourAreas={window.jsvars.tour_areas}
         initialDate={window.jsvars.tours_date}
         isAdmin={window.jsvars.is_admin}
         myRiderId={window.jsvars.rider_id}
@@ -112,7 +116,10 @@ function load_tour_schedules() {
 
 function load_rider_schedule() {
     const container = document.getElementById('schedule-content');
-    ReactDOM.render(<RiderTourSchedule initialDate={window.jsvars.date} />, container);
+    ReactDOM.render(<RiderTourSchedule 
+        initialDate={window.jsvars.date}
+        />,
+        container);
 }
 
 // this is the entry point to the javascript stuff, keep everything here

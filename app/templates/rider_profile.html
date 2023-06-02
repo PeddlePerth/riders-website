@@ -10,7 +10,7 @@
 </div>
 <div class="row g-3 justify-content-center">
 <div class="col-md-8 col-lg-6 col-xl-6 row g-3">
-    <h1>Rider Profile</h1>
+    <h1>Staff Profile</h1>
 
     {% if not request.person.email_verified %}
     <div class="card text-white bg-danger">
@@ -64,6 +64,7 @@
         {% else %}Not provided&nbsp;<img src="{% static 'admin/img/icon-no.svg' %}" alt="no"/>{% endif %}</p>
     </div>
 
+    {% if request.person.rider_class %}
     <div class="mt-4 mb-0">
         <span class="fs-4 fw-bold">Payment info</span>
         <a class="btn btn-primary m-2 mt-0 ms-3" href="{% url 'rider_edit_payroll' %}">Edit</a>
@@ -99,6 +100,7 @@
             {% else %}No{% endif %}
         </p>
     </div>
+    {% endif %}
 </div>
 </div>
 {% endblock %}

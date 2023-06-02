@@ -266,9 +266,12 @@ def get_date_filter(start_date, end_date, field):
         '%s__lte' % field: dt_end,
     }
 
+def today():
+    return localdate(now())
+
 def get_iso_date(date_str=None):
     if not date_str:
-        return localdate(now())
+        return today()
     else:
         try:
             return datetime.strptime(date_str, "%Y-%m-%d").date()

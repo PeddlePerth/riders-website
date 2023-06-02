@@ -109,6 +109,9 @@ class Person(MutableDataRecord):
         return BSB_REGEX.fullmatch(self.bank_bsb) and BANK_ACCT_REGEX.fullmatch(self.bank_acct)
 
     def profile_complete(self):
+        if not self.active or not self.rider_class:
+            # don't show profile warnings on non-rider accounts
+            return True
         return (
             self.display_name and self.email_verified
             and (self.phone_valid() or self.has_deputy_account) # can't change phone or email once invited to deputy
@@ -118,10 +121,12 @@ class Person(MutableDataRecord):
         )
 
     def pay_rate(self):
+        if not self.rider_class:
+            return None
         if self.override_pay_rate:
             return self.override_pay_rate
         from peddleconcept.settings import get_rider_payrate_setting
-        return get_rider_payrate_setting().get(self.rider_class, 30)
+        return get_rider_payrate_setting().get(self.rider_class)
 
     def rider_class_label(self):
         for x, y in self.RIDER_CLASS_CHOICES:

@@ -17,8 +17,8 @@ class Command(BaseCommand):
     help = 'Reload tour areas based on keywords, with option to save and update DB'
 
     def add_arguments(self, parser):
-        parser.add_argument('--update-existing', action='store_true')
-        parser.add_argument('--save-areas', action='store_true')
+        parser.add_argument('--update-existing', action='store_true', help='Re-calculate tour areas for tours with tour_area already set')
+        parser.add_argument('--save-areas', action='store_true', help='Save/update the tour pickup locations in the Area objects')
 
     @transaction.atomic
     def handle(self, *args, overwrite_existing=False, **options):

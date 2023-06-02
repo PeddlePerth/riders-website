@@ -19,6 +19,7 @@ class Command(BaseCommand):
         parser.add_argument('--match-only', action='store_true', help='Match rows with source_row_id but do not update any data')
         parser.add_argument('--allow-add', action='store_true', help="Don't add any Person objects")
         parser.add_argument('--company-id', help='Specify Deputy Company/Location ID')
+        parser.add_argument('--disable-riders', help='Disable riders who are not in Deputy')
     
     @transaction.atomic
     def handle(self, *args, overwrite_existing=False, **options):
@@ -29,4 +30,5 @@ class Command(BaseCommand):
             dry_run=options['dry_run'], 
             no_add=not options['allow_add'], 
             match_only=options['match_only'],
-            company_id=company)
+            company_id=company,
+            disable_riders=options['disable_riders'])

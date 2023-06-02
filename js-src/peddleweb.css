@@ -41,45 +41,8 @@ html {
     text-align: center;
 }
 
-#navbar {
-    margin-bottom: 12px;
-    background-color: #d8ff9d;
-    color: black !important;
-    width: 100%;
-}
-
-#navbar ul, #navbar ul > li {
-    list-style-type: none;
-    padding: 0;
-}
-
-#navbar ul {
-    overflow: auto; /* make parent expand for floating children */
-}
-
-#navbar li {
-    float: left;
-}
-
-#navbar a, #navbar p {
-    padding: 6px 14px;
-    margin: 0;
-    font-size: 12pt;
-    line-height: 20px;
-    display: inline-block;
-}
-
-#navbar a {
-    color: black !important;
-    font-weight: bold;
-    text-decoration: none !important;
-    background-color: #91c83e;
-}
-
-#navbar a:hover {
-    color: black;
-    background-color: #bcff57;
-    text-decoration: underline;
+.navbar .tour-schedule-area {
+    border-radius: 10px;
 }
 
 table, td, th {

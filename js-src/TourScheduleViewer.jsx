@@ -1,4 +1,4 @@
-const { useState } = require("react");
+const { useState, useEffect } = require("react");
 const { Row, Col, Badge, Pagination, Alert, Spinner, Dropdown, Stack, ButtonGroup, Button } = require("react-bootstrap");
 const { TSBikesInfo, count_bikes, join_bikes, TSRiderInfo } = require("./BikesWidget");
 const { CheckButton } = require("./components");
@@ -185,29 +185,49 @@ function FetchToursWidget({ toursDate, onComplete }) {
         </Dropdown>;
 }
 
-function TourScheduleViewer({ initialDate, isAdmin, myRiderId }) {
+function TourScheduleViewer({ tourAreas, initialAreaId, initialDate, isAdmin, myRiderId }) {
     const [errors, setErrors] = useState([]); // messages & errors from Fetch Tour Data widget
     const [msgs, setMessages] = useState([]);
     const [filterRider, setFilterRider] = useState(false);
     const [showCancelled, setShowCancelled] = useState(false);
 
-    const [data, isLoading, dataError, {toursDate}, reloadData] = 
+    const [data, isLoading, dataError, {toursDate, tourAreaId}, reloadData] = 
         useAjaxData(window.jsvars.data_url, 
-            (data, {toursDate}) => {
+            (data, {toursDate, tourAreaId}) => {
                 if (toursDate.valueOf() === today().valueOf()) {
-                    window.history.replaceState(null, '', window.jsvars.today_url);
+                    const todayUrl = window.jsvars.today_url.replace('AREA_ID', tourAreaId);
+                    window.history.replaceState(null, '', todayUrl);
                 } else {
-                    const toursUrl = window.jsvars.view_url.replace('DATE', format_iso_date(toursDate));
+                    const toursUrl = window.jsvars.view_url
+                        .replace('DATE', format_iso_date(toursDate))
+                        .replace('AREA_ID', tourAreaId);
     -               window.history.replaceState(null, '', toursUrl);
                 }
+                $('title').text(tourAreas[tourAreaId].display_name);
                 return {
-                    tours_date: toursDate.valueOf()
+                    tours_date: toursDate.valueOf(),
+                    tour_area_id: tourAreaId,
                 }
-            }, null, () => ({ toursDate: new Date(initialDate) }));
+            }, null, () => ({ toursDate: new Date(initialDate), tourAreaId: initialAreaId }));
 
-    //console.log('toursDate=', toursDate);
+    // override the nav button behaviour to avoid rebooting the tour schedule viewer
+    useEffect(() => {
+        function onAreaNavClick(e) {
+            e.preventDefault();
+            reloadData({
+                toursDate: toursDate.valueOf(),
+                tourAreaId: parseInt(e.target.attributes['data-area-id'].value)
+            });
+        }
+        $('.tour-schedule-area').on('click', onAreaNavClick);
+        return () => {
+            $('.tour-schedule-area').off('click', onAreaNavClick);
+        };
+    });
 
-    const editUrl = window.jsvars.edit_url.replace('DATE', format_iso_date(toursDate));
+    const editUrl = window.jsvars.edit_url
+        .replace('DATE', format_iso_date(toursDate))
+        .replace('AREA_ID', tourAreaId);
     const weekStart = new Date(toursDate);
     firstDayOfWeek(weekStart);
     const payUrl = window.jsvars.report_url.replace('DATE', format_iso_date(weekStart));
@@ -240,12 +260,18 @@ function TourScheduleViewer({ initialDate, isAdmin, myRiderId }) {
         allErrors.push(dataError);
     }
 
+    const tourArea = tourAreas[tourAreaId];
     return <div>
-        <h1>Tour schedule for { format_short_date(toursDate) }</h1>
+        <h2 className="mt-1 mb-3">
+            <span className="p-1 rounded-3 text-white" style={{backgroundColor: tourArea.colour}}>
+                { tourArea.display_name }
+            </span>&nbsp;
+            - { format_short_date(toursDate) }
+        </h2>
         { allErrors.map((error, i) => <Alert key={'e' + i} variant="danger">{error}</Alert>) }
         { msgs.map((msg, i) => <Alert key={'m' + i} variant="success">{msg}</Alert>) }
         <WeekNavigator date={toursDate} onChangeDate={(date) => {
-                reloadData({toursDate: date});
+                reloadData({tourAreaId, toursDate: date});
                 setErrors([]);
                 setMessages([]);
             }}/>
@@ -254,7 +280,9 @@ function TourScheduleViewer({ initialDate, isAdmin, myRiderId }) {
             <FetchToursWidget toursDate={toursDate} onComplete={(msgs, errs) => {
                 reloadData();
                 setErrors(errs); setMessages(msgs); }} />
-            <Button variant="secondary" href={editUrl}>Edit Schedule</Button>
+            <Button variant="secondary"
+                style={{ backgroundColor: tourArea.colour }}
+                href={editUrl}>Edit Schedule</Button>
             <Button variant="secondary" href={payUrl}>Weekly Tour Pays</Button>
             <Button variant="secondary" href={venuesUrl}>Weekly Venue Bookings</Button>
         </ButtonGroup> : null }

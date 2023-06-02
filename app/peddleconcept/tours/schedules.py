@@ -5,6 +5,7 @@ from peddleconcept.models import *
 from peddleconcept.util import *
 from peddleconcept.settings import *
 from django.utils.timezone import localdate, localtime
+from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -133,34 +134,48 @@ def get_venues_summary(tour):
     vsum.append("%s - Tour finish" % format_time(tv.time_depart))
     return '\n'.join(vsum)
 
-def get_rider_schedule(tours_date, person):
+def get_rider_schedule(start_date, end_date, person):
     """ prepare data for RiderTourSchedule """
-    tr_filter = get_date_filter(tours_date, tours_date, 'tour__time_start')
-    tour_rider_qs = TourRider.objects.select_related('tour', 'person').filter(
+    # get data for 2 days prior up to 2 weeks after
+
+    tr_filter = get_date_filter(start_date, end_date, 'tour__time_start')
+    tour_rider_qs = TourRider.objects.select_related('tour', 'tour__session', 'person').filter(
         person=person, **tr_filter
     ).order_by('tour__time_start')
 
+    trs_by_date = {}
+    for tr in tour_rider_qs:
+        key_date = json_datetime(localdate(tr.tour.time_start))
+        trs_for_date = trs_by_date.setdefault(key_date, [])
+        trs_for_date.append({
+            'tour': tr.tour.to_json(),
+            'session': tr.tour.session.to_json(),
+            'tourRider': tr.to_json(),
+        })
+
     return {
-        'tours': [
-            {
-                'tour': tr.tour.to_json(),
-                'tourRider': tr.to_json(),
-                'session': tr.session.to_json()
-            } for tr in tour_rider_qs
-        ],
+        'tour_dates': trs_by_date,
+        'tourAreas': {
+            area.id: area.to_json() for area in Area.objects.filter(active=True)
+        },
         'riders': {
             r.id: r.display_name or r.name for r in Person.objects.filter(rider_class__isnull=False)
         },
         'bikeTypes': get_bikes_setting(),
         'venues': { v.id: v.to_json() for v in Venue.objects.all() },
-        'toursDate': json_datetime(tours_date),
+        'startDate': json_datetime(start_date),
+        'endDate': json_datetime(end_date),
     }
 
-def get_tour_schedule_data(tours_date):
+def get_tour_schedule_data(tour_area, tours_date):
     """ prepare data for TourScheduleEditor """
     date_filter = get_date_filter(tours_date, tours_date, 'time_start')
-    tours_qs = Tour.objects.filter(**date_filter).order_by(
-        'time_start', 'tour_type', 'customer_name').prefetch_related('riders', 'venues').select_related('session')
+    tours_qs = Tour.objects.filter(
+        tour_area = tour_area,
+        **date_filter
+    ).order_by(
+        'time_start', 'tour_type', 'customer_name'
+    ).prefetch_related('riders', 'venues').select_related('session')
     sessions_qs = Session.objects.filter(**date_filter).order_by('time_start', 'session_type').values_list('id', flat=True)
 
     # accumulate only sessions which have tours & tours json at the same time
@@ -287,7 +302,7 @@ def save_tour_schedule(tours_date, schedule_data):
                 if not tr:
                     # create new TourRider
                     tr = TourRider(
-                        rider = rider,
+                        person = rider,
                         tour = tour,
                         rider_role = tr_json.get('rider_role') or '',
                     )

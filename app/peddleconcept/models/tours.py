@@ -24,7 +24,7 @@ class Area(MutableDataRecord):
     tour_locations = models.JSONField(default=dict, blank=True,
         help_text='JSON list of strings being each tour pickup location included under this area')
     sort_order = models.IntegerField(blank=True, default=0)
-    active = models.BooleanField(blank=True, default=True, verbose_name='Show to riders')
+    active = models.BooleanField(blank=True, default=True, verbose_name='Visible on website')
     deputy_sync_enabled = models.BooleanField(blank=True, default=False, 
         help_text='If enabled, the Area data and associated shifts are pushed to Deputy and can overwrite other changes')
     
@@ -46,6 +46,15 @@ class Area(MutableDataRecord):
 
     def __str__(self):
         return 'Tour area: %s' % self.name
+
+    def to_json(self):
+        return {
+            'area_id': self.pk,
+            'display_name': self.name,
+            'active': self.active,
+            'sort_order': self.sort_order,
+            'colour': self.colour,
+        }
 
 class Venue(models.Model):
     name = models.CharField(max_length=200, help_text="Name of venue to show on schedules & in the editor")
@@ -160,6 +169,7 @@ class Tour(MutableDataRecord):
     def to_json(self, with_related_data=True):
         basic = {
             'id': self.id,
+            'area_id': self.tour_area_id,
             'session_id': self.session_id,
             'time_start': json_datetime(self.time_start),
             'time_end': json_datetime(self.time_end),

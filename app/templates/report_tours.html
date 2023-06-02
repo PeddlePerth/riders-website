@@ -6,11 +6,6 @@
 {% block page_content %}
 <div class="hstack">
     <h1>Rider Tours Report</h1>
-    <div class="tour-schedule-links btn-group my-1 mx-3">
-        {% for day in week_urls %}
-        <a class="btn btn-light border-dark" href="{{ day.url }}">{{ day.title }}</a>
-        {% endfor %}
-    </div>
 </div>
 <h3>from {{ start_date }} to {{ end_date }}</h3>
 

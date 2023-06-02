@@ -100,7 +100,7 @@ def sync_deputy_areas(push_deputy=True, dry_run=False):
         logger.info('No areas to update in Deputy')
 
     status_msg = "%d matches, %d removed in Deputy, %d updated/pushed, %d new rows, %d change logs" % (
-        len(matches_set), len(del_dpt_set), len(to_update_deputy), len(new_dpt_set)
+        len(matches_set), len(del_dpt_set), len(to_update_deputy), len(new_dpt_set), len(changelogs),
     )
     logger.info('%ssync_deputy_areas: %s' % (
         'DRY RUN: ' if dry_run else '', status_msg,

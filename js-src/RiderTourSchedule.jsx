@@ -1,10 +1,11 @@
-const { useEffect, useRef, forwardRef } = require("react");
-const { Spinner, Badge, Alert, Row, Col } = require("react-bootstrap");
+const { useEffect, useRef, forwardRef, useState } = require("react");
+const { Spinner, Badge, Alert, Row, Col, Pagination } = require("react-bootstrap");
 const { TSBikesInfo } = require("./BikesWidget");
 const { useAjaxData } = require("./hooks");
 const { WeekNavigator } = require("./TourScheduleViewer");
 const { get_venues_summary } = require("./TourVenuesEditor");
-const { format_timedelta, format_time_12h, htmlLines, format_iso_date, format_short_date, format_time, today } = require("./utils");
+const { format_timedelta, format_time_12h, htmlLines, format_iso_date,
+     format_short_date, format_time, today, addDays, firstDayOfWeek } = require("./utils");
 
 function getToursWithBreaks(tours) {
     if (!tours) return null;
@@ -42,20 +43,26 @@ const RiderTSBreak = forwardRef(({ data }, ref) => {
     </div>;
 });
 
-const RiderTSTour = forwardRef(({ past, now, tourRider, tour, session, allVenues, allRiders, bikeTypes }, ref) => {
+const RiderTSTour = forwardRef(({ past, now, tourRider, tour, session, allVenues, allRiders, bikeTypes, tourAreas }, ref) => {
     let duration = (tour.time_end - tour.time_start);
     var venuesText = null;
     if (tour.show_venues && tour.venues && tour.venues.length > 0) {
         venuesText = get_venues_summary(tour, allVenues).join('\n');
     }
     const ridersNotMe = tour.riders.filter(tr => tr.rider_id != tourRider.rider_id);
+    const area = tourAreas ? tourAreas[tour.area_id] : null;
 
     return <div className={
             (now ? 'text-highlight ' : '') + 
             (past ? 'bg-secondary bg-opacity-50 ' : '') + "p-1 border-bottom pb-3"} ref={ref}>
         <Row xs={1} md={2}>
             <Col className="lh-lg" xs="auto">
-                <div className="d-inline-block fw-bold fs-5">{session.title}</div>
+                <div className="ms-2 d-inline-block fw-bold fs-5">
+                    <span className="badge" style={{ backgroundColor: area ? area.colour : null }}>
+                        { area ? area.display_name : null }
+                    </span>&nbsp;
+                    {session.title}
+                </div>
                 { tourRider.rider_role ? <Badge bg="primary" className="ms-2">{tourRider.rider_role}</Badge> : null }
                 <div key={1} className="d-inline-block">
                     <span className="ms-2 d-inline-block text-decoration-underline fs-5">{tour.customer_name}</span>&nbsp;
@@ -75,7 +82,7 @@ const RiderTSTour = forwardRef(({ past, now, tourRider, tour, session, allVenues
                         </div>;
                     })}
                 </div>
-                <div className="ms-2"><b>Qty:</b> {htmlLines(tour.quantity)}</div>
+                <div className="ms-2" key={3}><b>Qty:</b> {htmlLines(tour.quantity)}</div>
                 <div className="ms-2"><b>Pickup at:</b> {htmlLines(tour.pickup_location)}</div>
             </Col>
             { (tour.notes && tour.notes.trim()) || venuesText ? 
@@ -88,36 +95,114 @@ const RiderTSTour = forwardRef(({ past, now, tourRider, tour, session, allVenues
     </div>;
 });
 
+function inDateRange(date, startDate, endDate) {
+    return startDate !== undefined && endDate !== undefined &&
+        date.valueOf() >= startDate.valueOf() && 
+        date.valueOf() < endDate.valueOf();
+}
+
+function getDateRange(toursDate, startDate, endDate) {
+    // check if the toursDate is outside date range or if date range not specified
+    if (!inDateRange(toursDate, startDate, endDate)) {
+        // then create a new date range around the toursDate
+        startDate = new Date(toursDate);
+        endDate = new Date(toursDate);
+        firstDayOfWeek(startDate);
+        addDays(endDate, 7);
+        firstDayOfWeek(endDate);
+    }
+
+    return {
+        startDate, endDate, toursDate,
+    };
+}
+
+const RiderShiftNavigator = ({startDate, endDate, selectedDate, toursByDate, onChangeDate}) => {
+    let prevDate = new Date(startDate), nextDate = new Date(endDate);
+    addDays(prevDate, -1);
+    //addDays(nextDate, 1);
+    let allDays = [];
+    let curDate = new Date(startDate);
+    while (curDate.valueOf() < endDate.valueOf()) {
+        allDays.push(curDate);
+        curDate = new Date(curDate);
+        addDays(curDate, 1);
+        //console.log(curDate, curDate.valueOf());
+    }
+
+    function getdesc(date) {
+        if (toursByDate == null) return 'No tours';
+        tours = toursByDate[date.valueOf()];
+
+        if (tours === undefined || tours.length === 0) return 'No tours';
+        return <b>{(tours.length == 1 ? '1 tour' : (tours.length + ' tours'))}</b>;
+    }
+
+    return <Pagination className="m-1 overflow-auto">
+            <Pagination.First onClick={() => onChangeDate(prevDate)}>
+                {format_short_date(prevDate)}<br/>&laquo;
+            </Pagination.First>
+            { allDays.map(date => <Pagination.Item
+                    key={date}
+                    onClick={() => onChangeDate(date)}
+                    active={selectedDate.valueOf() == date.valueOf()}>
+                        {format_short_date(date)}
+                        <br/>
+                        { getdesc(date) }
+                    </Pagination.Item>) }
+            <Pagination.Last onClick={() => onChangeDate(nextDate)}>
+                {format_short_date(nextDate)}<br/>&raquo;
+            </Pagination.Last>
+        </Pagination>;
+};
+
 const RiderTourSchedule = ({ initialDate }) => {
     const currentTourEl = useRef(null);
 
-    const [data, isLoading, dataError, {toursDate}, reloadData] = 
-    useAjaxData(window.jsvars.data_url, 
-        (data, {toursDate}) => {
-            if (toursDate.valueOf() === today().valueOf()) {
-                window.history.replaceState(null, '', window.jsvars.today_url);
-            } else {
-                const toursUrl = window.jsvars.my_url.replace('DATE', format_iso_date(toursDate));
-    -               window.history.replaceState(null, '', toursUrl);
-            }
-            return {
-                riderTours: true,
-                tours_date: toursDate.valueOf()
-            }
-        }, null, () => ({ toursDate: new Date(initialDate) }));
+    const [toursDate, _setToursDate] = useState(initialDate);
 
-    var hasTours = data && data.tours.length > 0;
+    const [data, isLoading, dataError, {startDate, endDate}, reloadData] = 
+    useAjaxData(window.jsvars.data_url, 
+        (data, {startDate, endDate}) => {
+            return { // return actual request data
+                startDate: startDate.valueOf(),
+                endDate: endDate.valueOf(),
+            }
+        }, null, () => getDateRange(toursDate));
+
+    function setToursDate(date) {
+        if (date.valueOf() === toursDate.valueOf()) return;
+        if (date.valueOf() === today().valueOf()) {
+            window.history.replaceState(null, '', window.jsvars.today_url);
+        } else {
+            const toursUrl = window.jsvars.my_url.replace('DATE', format_iso_date(date));
+            window.history.replaceState(null, '', toursUrl);
+        }
+
+        if (!inDateRange(date, startDate, endDate)) {
+            reloadData(getDateRange(date));
+        }
+        _setToursDate(date);
+    }
+
+    var todayDate = toursDate.valueOf();
+    var hasTours = data && Object.keys(data.tour_dates).length > 0 &&
+        todayDate in data.tour_dates && data.tour_dates[todayDate].length > 0;
 
     var content = null, hasCurrentTour = false;
     if (isLoading) {
         content = <div className="p-5 text-center"><Spinner animation="border" role="status"></Spinner></div>;
     } else if (hasTours) {
-        let toursAndBreaks = getToursWithBreaks(data.tours);
+        let todayTours = data.tour_dates[todayDate];
+
+        let toursAndBreaks = getToursWithBreaks(todayTours);
         content = <div className="border">
             { toursAndBreaks.map((tour, i) =>  {
                 if (tour.now) hasCurrentTour = true;
                 return tour.isBreak ? <RiderTSBreak key={i} data={tour} ref={tour.now ? currentTourEl : null}/> : 
-                <RiderTSTour key={i} {...tour} bikeTypes={data.bikeTypes} allVenues={data.venues} allRiders={data.riders}
+                <RiderTSTour key={i} {...tour} 
+                    bikeTypes={data.bikeTypes} allVenues={data.venues} allRiders={data.riders}
+                    tourAreas={data.tourAreas}
                 ref={tour.now ? currentTourEl : null} />
             }
             )}
@@ -142,8 +227,14 @@ const RiderTourSchedule = ({ initialDate }) => {
         return () => document.removeEventListener('visibilitychange', onVisChange);
     });
     return <div>
-        <h1>My tours for { format_short_date(toursDate) }</h1>
-        <WeekNavigator date={toursDate} onChangeDate={(date) => reloadData({toursDate: date})} />
+        <h2>My tours for { format_short_date(toursDate) }</h2>
+        <RiderShiftNavigator 
+            startDate={startDate}
+            endDate={endDate}
+            selectedDate={toursDate}
+            toursByDate={data ? data.tour_dates : null}
+            onChangeDate={setToursDate}
+            />
         {content}
     </div>;
 };

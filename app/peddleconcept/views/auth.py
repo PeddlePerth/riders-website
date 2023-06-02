@@ -21,6 +21,7 @@ from peddleconcept.forms import (
 )
 from peddleconcept.email import send_account_auth_email, validate_auth_token
 from .decorators import require_person_or_user, get_rider_setup_redirect, require_null_person
+from .base import render_base
 from peddleconcept.middleware import logout_all_session
 
 logger = logging.getLogger(__name__)
@@ -49,7 +50,7 @@ def rider_login_view(request):
     else:
         form = PersonLoginForm()
 
-    return render(request, 'rider_login.html', {
+    return render_base(request, 'rider_login', context={
         'form': get_form_fields(form),
         'form_errors': form.non_field_errors(),
     })
@@ -88,7 +89,7 @@ def rider_login_verify_view(request):
     else:
         form = AuthCodeForm()
     
-    return render(request, 'rider_login_verify.html', {
+    return render_base(request, 'rider_login_verify', context={
         'user_email': obj.email,
         'form': get_form_fields(form),
         'form_errors': form.non_field_errors(),
