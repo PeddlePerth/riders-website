@@ -114,7 +114,7 @@ def person_name_key(person):
     return "_".join(fname[:1] + lname[-1:])
 
 @transaction.atomic
-def sync_deputy_people(dry_run=False, no_add=True, match_only=False, company_id=None):
+def sync_deputy_people(dry_run=False, disable_riders=False, no_add=True, match_only=False, company_id=None):
     """
     Match Employee objects from Deputy with Person rows & update Person objects where relevant.
     Try to match everything by name. Warn but ignore rows which aren't found - so they can be
@@ -143,15 +143,18 @@ def sync_deputy_people(dry_run=False, no_add=True, match_only=False, company_id=
 
     for emp in api.query_all_employees():
         name_key = person_name_key(emp)
+        chg = False
         if emp.source_row_id in db_people_by_srid:
             # already have matching row using Deputy Employee ID
             found_pers = db_people_by_srid.pop(emp.source_row_id)
             if found_pers.source_row_state != 'none':
                 found_pers.source_row_state = 'live'
+                chg = True
         elif name_key in db_people_by_name:
             found_pers = db_people_by_name.pop(name_key)
             found_pers.source_row_id = emp.source_row_id
             found_pers.source_row_state = 'live'
+            chg = True
         else:
             # new Person object
             found_pers = None
@@ -175,39 +178,56 @@ def sync_deputy_people(dry_run=False, no_add=True, match_only=False, company_id=
                     emp.save()
 
         if found_pers is not None:
+            logger.debug('Matched Person with Employee: Local/Deputy: (%s) %s - %s (%s)' %(
+                found_pers.pk, found_pers.name, emp.name, emp.source_row_id,
+            ))
             if not match_only and (chglog := found_pers.update_from_instance(emp)):
                 changelogs.append(chglog)
                 num_updated += 1
+                chg = True
+            else:
+                num_unchanged += 1
 
-            if not dry_run:
+            if chg and not dry_run:
                 found_pers.save()
 
+    num_deleted = 0
     for pers in db_people_by_srid.values():
         # deactivate deleted employees automatically
-        pers.update_field('active', False, source='deputy')
+        chg = pers.update_field('active', False, source='deputy')
         if (chglog := pers.mark_source_deleted()):
+            chg = True
             changelogs.append(chglog)
-        if not dry_run:
-            pers.save()
+        if chg:
+            num_deleted += 1
+            if not dry_run:
+                pers.save()
 
-    for pers in db_people_by_name.values():
-        chg = False
-        if pers.active:
-            # non-deputy employees are automatically inactivated
-            pers.update_field('active', False, source='deputy')
-            chg = True
-        if (chglog := pers.mark_source_deleted()):
-            changelogs.append(chglog)
-            chg = True
-        if chg and not dry_run:
-            pers.save()
+    num_disabled = 0
+    if disable_riders:
+        for pers in db_people_by_name.values():
+            chg = False
+            if pers.active:
+                # non-deputy employees are automatically inactivated
+                pers.update_field('active', False, source='deputy')
+                chg = True
+            if (chglog := pers.mark_source_deleted()):
+                changelogs.append(chglog)
+                chg = True
+            if chg:
+                num_disabled += 1
+                if not dry_run:
+                    pers.save()
 
     if not dry_run:
         ChangeLog.objects.bulk_create(changelogs)
     
-    status_msg = "%d new in Deputy, %d unchanged, %d updated, %d deleted in Deputy, %d not in Deputy, %d change logs" % (
-        num_added, num_unchanged, num_updated, len(db_people_by_srid),
-        len(db_people_by_name), len(changelogs)
+    status_msg = (
+        "%d new in Deputy%s, %d unchanged, %d updated, %d deleted "
+        "in Deputy, %d not in Deputy%s, %d change logs"
+    ) % (
+        num_added, ' - added' if not no_add else '', num_unchanged, num_updated, num_deleted,
+        num_disabled, ' - disabled' if disable_riders else '', len(changelogs),
     )
     logger.info(
         '%ssync_deputy_people: %s' % ('DRY RUN: ' if dry_run else '', status_msg)

@@ -26,7 +26,8 @@ class Person(MutableDataRecord):
     Corresponds 1:1 with Deputy Employees.
     """
     class Meta:
-        verbose_name_plural = 'People'
+        verbose_name = 'Person'
+        verbose_name_plural = 'Riders & Deputy Users'
 
     MUTABLE_FIELDS = ('first_name', 'last_name', 'active', 'phone', 'email', 'email_verified')
     first_name = models.CharField(max_length=200)
@@ -56,12 +57,8 @@ class Person(MutableDataRecord):
     active = models.BooleanField(blank=True)
     abn = models.CharField(max_length=30, blank=True, verbose_name='Contractor ABN',
         validators=[validate_abn])
-    bank_bsb = models.CharField(max_length=20, blank=True, verbose_name='Bank account BSB',
-        validators = [RegexValidator(BSB_REGEX, message='BSB must be exactly 6 digits')],
-    )
-    bank_acct = models.CharField(max_length=20, blank=True, verbose_name='Bank account number',
-        validators = [RegexValidator(BANK_ACCT_REGEX, message='Must be a number between 4 and 20 digits')]
-    )
+    bank_bsb = models.CharField(max_length=20, blank=True, verbose_name='Bank account BSB')
+    bank_acct = models.CharField(max_length=20, blank=True, verbose_name='Bank account number')
     last_seen = models.DateTimeField(default=timezone.now, null=True, blank=True, verbose_name='Last activity')
     created = models.DateTimeField(default=timezone.now, verbose_name='Date joined')
 

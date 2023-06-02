@@ -21,6 +21,7 @@ from peddleconcept.forms import (
 from peddleconcept.email import send_account_auth_email, validate_auth_token, send_payroll_change_email
 from .decorators import require_person_or_user, get_rider_setup_redirect, require_null_person
 from peddleconcept.deputy_api import DeputyAPI
+from peddleconcept.settings import get_setting_or_default
 
 logger = logging.getLogger(__name__)
 
@@ -205,20 +206,11 @@ def rider_migrate_verify_view(request):
                 if validate_auth_token(request, form.cleaned_data['auth_code']):
                     # create the new Person object and populate with data stored in session
                     if not obj.has_deputy_account:
-                        obj.fname = request.session.pop('rider_first_name')
-                        obj.lname = request.session.pop('rider_last_name')
-                        obj.email = request.session.pop('rider_email')
-                        obj.phone = request.session.pop('rider_phone')
-                        
-                        api = DeputyAPI()
-                        try:
-                            ok = api.add_employee(obj, send_invite=True)
-                        except:
-                            ok = False
-                        if ok:
-                            messages.success(request, 'Deputy invitation sent! Please check your email.')
-                        else:
-                            messages.error(request, 'Error creating Deputy account! Please contact an administrator')
+                        # can't modify this data if the rider already has a Deputy account
+                        obj.fname = request.session['rider_first_name']
+                        obj.lname = request.session['rider_last_name']
+                        obj.email = request.session['rider_email']
+                        obj.phone = request.session['rider_phone']
 
                     obj.last_seen = timezone.now()
                     obj.email_verified = True
@@ -227,6 +219,8 @@ def rider_migrate_verify_view(request):
 
                     del request.session['rider_migrate_state']
                     request.session['person_id'] = str(obj.id)
+                    for x in ['rider_first_name', 'rider_last_name', 'rider_email', 'rider_phone']:
+                        del request.session[x]
                     num_del, num_types = PersonToken.objects.filter(person=obj, action='rider_login_migrated').delete()
                     logger.info("Migrated rider verification completed for user %s <%s> (deleted %d PersonTokens)" % (
                         obj.name, obj.email, num_del

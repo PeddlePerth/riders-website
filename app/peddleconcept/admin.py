@@ -108,13 +108,35 @@ class PersonAdmin(MyModelAdmin):
         'override_pay_rate', 'email', 'phone', 'last_seen',)
     list_filter = ('active', 'source_row_state', 'email_verified', 'rider_class', 'is_core_rider', 'override_pay_rate')
     ordering = ['-active', '-rider_class']
-    actions = ['disable_selected', 'invite_deputy']
+    actions = ['activate_selected', 'disable_selected', 'invite_deputy']
     search_fields = ('display_name', 'first_name', 'last_name', 'email')
 
-    @admin.action(description='Disable selected accounts')
+    fieldsets = (
+        (None, {
+            'fields': ('first_name', 'last_name', 'display_name', 'active', 
+                'is_core_rider', 'rider_class', 'override_pay_rate', 'email', 'phone'
+            ),
+        }),
+        ('Rider payment details', {
+            'fields': ('abn', 'bank_acct', 'bank_bsb'),
+        }),
+        ('Advanced options', {
+            'fields': ('email_verified', 'user', 'last_seen', 'created', 'source_row_state', 
+                'source_row_id', 'source',
+            ),
+        })
+    )
+
+
+    @admin.action(description='Archive selected riders')
     def disable_selected(self, request, queryset):
         num_updated = queryset.update(active=False)
         messages.success('%d riders disabled' % num_updated)
+
+    @admin.action(description='Un-archive selected riders')
+    def activate_selected(self, request, queryset):
+        num_updated = queryset.update(active=True)
+        messages.success('%d riders enabled' % num_updated)
 
     @admin.display(description='Rider Status')
     def rider_status_html(self, obj):
@@ -133,7 +155,7 @@ class PersonAdmin(MyModelAdmin):
                 messages.error(request, "Error adding %s to Deputy: %s: %s" % (
                     obj.name, type(e).__name__, str(e),
                 ))
-        
+
     def has_delete_permission(self, request, obj=None):
         if obj is None:
             return False
