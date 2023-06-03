@@ -96,6 +96,7 @@ function load_tour_dashboard(selected) {
                 //console.log("selected date", date);
                 load_tour_dashboard(date);
             },
+            tourAreas: window.jsvars.tour_areas,
         }),
         document.getElementById('dashboard')
     );

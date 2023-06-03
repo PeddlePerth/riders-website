@@ -95,7 +95,7 @@ function WeekNavigator({ date, onChangeDate }) {
         days[i] = day;
     }
 
-    return <Pagination className="m-1 overflow-auto">
+    return <Pagination className="my-1 overflow-auto">
             <Pagination.First onClick={() => onChangeDate(prev)} />
             { days.map(day => <Pagination.Item
                     key={day}
@@ -262,12 +262,6 @@ function TourScheduleViewer({ tourAreas, initialAreaId, initialDate, isAdmin, my
 
     const tourArea = tourAreas[tourAreaId];
     return <div>
-        <h2 className="mt-1 mb-3">
-            <span className="p-1 rounded-3 text-white" style={{backgroundColor: tourArea.colour}}>
-                { tourArea.display_name }
-            </span>&nbsp;
-            - { format_short_date(toursDate) }
-        </h2>
         { allErrors.map((error, i) => <Alert key={'e' + i} variant="danger">{error}</Alert>) }
         { msgs.map((msg, i) => <Alert key={'m' + i} variant="success">{msg}</Alert>) }
         <WeekNavigator date={toursDate} onChangeDate={(date) => {
@@ -292,6 +286,12 @@ function TourScheduleViewer({ tourAreas, initialAreaId, initialDate, isAdmin, my
         <ButtonGroup className="mb-1 mt-1 me-2">
             <CheckButton checked={showCancelled} text="Show cancelled tours" onChange={setShowCancelled} />
         </ButtonGroup>
+        <h2 className="mt-3 mb-3">
+            <span className="p-1 rounded-3 text-white" style={{backgroundColor: tourArea.colour}}>
+                { tourArea.display_name }
+            </span>&nbsp;
+            - { format_short_date(toursDate) }
+        </h2>
         {content}
     </div>;
 }

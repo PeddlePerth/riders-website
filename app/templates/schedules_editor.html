@@ -5,7 +5,10 @@
 
 {% block contentclass %}container-fluid{% endblock %}
 {% block page_content %}
-<h1>Editing tour schedule for {{ date }}</h1>
+<h2>
+    <span class="badge" style="background-color: {{ tour_area.colour }}">{{ tour_area.display_name }}</span>
+    Editing schedule for {{ date }}
+</h2>
 
 <div id="schedule-content">Loading tour schedule...</div>
 

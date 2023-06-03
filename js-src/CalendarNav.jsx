@@ -98,8 +98,8 @@ function CalendarDay({ date, inMonth=true, today=false, active=false, onSelect, 
     return <Col
         className={cls} 
         onClick={(e) => (inMonth && onSelect) ? onSelect(date) : null}>
-            <span className="date">{date.getDate()}</span>&nbsp;
-            <div className="Badges">{ badges }&nbsp;</div>
+            <span className="date">{date.getDate()}</span>
+            <div className="Badges">{ badges }</div>
         </Col>;
 }
 

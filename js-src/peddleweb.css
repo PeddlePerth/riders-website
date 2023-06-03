@@ -695,11 +695,6 @@ th.rider-tour-day {
     display: inline-block;
 }
 
-.TourSummary .Header .btn {
-    position: relative;
-    top: -3px;
-}
-
 .TourSummaryTour {
     border: 1px solid #dee2e6;
     border-radius: 5px;
@@ -725,7 +720,6 @@ th.rider-tour-day {
 }
 
 .TourSummaryTour .Type {
-    background-color: rgb(240, 255, 205);
     padding: 4px;
     font-weight: bold;
 }
@@ -741,6 +735,22 @@ th.rider-tour-day {
     right: -20px;
     top: 0px;
     border-radius: 20px;
+}
+
+.AreaInfoBadge .badge {
+    border-radius: 50rem;
+    padding: 0.35em 0.4em;
+}
+
+.AreaInfoBadge :first-child {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    margin-right: 0;
+}
+.AreaInfoBadge :last-child {
+    margin-left: 0;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
 }
 
 .TourVenue {

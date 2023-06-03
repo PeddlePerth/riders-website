@@ -210,12 +210,12 @@ def get_tour_schedule_data(tour_area, tours_date):
 def get_tour_summary(start_date, end_date):
     """ returns a list of tours with type, quantity/pax, bikes, num. riders needed/allocated """
     date_filter = get_date_filter(start_date, end_date, 'time_start')
-    tours_qs = Tour.objects.prefetch_related('riders').filter(
+    tours_qs = Tour.objects.prefetch_related('riders').select_related('tour_area').filter(
         **date_filter,
-    ).order_by('time_start', 'tour_type')
+    ).order_by('tour_area__sort_order', 'time_start', 'tour_type')
 
-    tours_by_date = {}
-    tours_ordered = []
+    tours_by_date = {} # dict of iso dates with data on tours
+    tours_ordered = [] # same dict instances added to a list in order
 
     bike_types = get_bikes_setting()
 
@@ -223,33 +223,42 @@ def get_tour_summary(start_date, end_date):
         date = t.time_start.date().isoformat()
         if not date in tours_by_date:
             today = tours_by_date[date] = {
-                'cancelled': 0,
-                'needs_riders': 0,
-                'filled': 0,
+                'areas': {},
                 'date': json_datetime(t.time_start.date()),
                 'isodate': date,
-                'tours': [],
                 'updated': 0,
             }
             tours_ordered.append(today)
         else:
             today = tours_by_date[date]
+        
+        # count tour info by area within each day
+        if not t.tour_area_id in today['areas']:
+            today_area = today['areas'][t.tour_area_id] = { # areaInfo in TourDashboard.jsx
+                'cancelled': 0,
+                'needs_riders': 0,
+                'filled': 0,
+                'tours': [],
+                'area_id': t.tour_area_id,
+            }
+        else:
+            today_area = today['areas'][t.tour_area_id]
 
         num_riders = len(t.riders.all())
         num_bikes = get_num_bikes(t.bikes)
         canned = t.is_cancelled()
         if canned:
-            today['cancelled'] += 1
+            today_area['cancelled'] += 1
         elif num_riders < num_bikes:
-            today['needs_riders'] += 1
+            today_area['needs_riders'] += 1
         else:
-            today['filled'] += 1
+            today_area['filled'] += 1
 
         tour_updated = json_datetime(t.updated)
         if tour_updated > today['updated']:
             today['updated'] = tour_updated
 
-        today['tours'].append({
+        today_area['tours'].append({
             'id': t.id,
             'num_riders': num_riders,
             'num_bikes': num_bikes,
