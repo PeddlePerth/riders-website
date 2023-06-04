@@ -56,6 +56,10 @@ class EditableTextField extends Component {
 
     onClick(event) {
         const [val, auto_val] = this.getMetadata();
+        if (event.ctrlKey) {
+            this.onChange(auto_val); // reset to default value
+            return;
+        }
         if (this.props.editable && !this.state.editing) {
             let cursorPos = 0, charIndex = event.target.attributes['charindex'];
             if (charIndex) {

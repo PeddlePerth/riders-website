@@ -6,7 +6,6 @@ const TimespanLock = require('./TimespanLock.js');
 const { join_bikes, count_bikes } = require('./BikesWidget.js');
 const EditableTextField = require('./EditableTextField.js');
 const { plural, format_time_12h } = require('./utils.js');
-const FocusedInput = require('./FocusedInput.js');
 const { useMemo, useState } = require('react');
 const { CheckButton } = require('./components.js');
 
@@ -309,6 +308,7 @@ class TourScheduleEditor extends React.Component {
                 </Stack>
                 <div key={0}>
                     <ul className="tips">
+                        <li key={-1}>Hold Ctrl key and click to revert cells to the original value (<span className="bi-command"/> on Mac)</li>
                         { !hasVenues ? [
                             <li key={1}>Add stops to a tour using the preset buttons in under Notes.</li>
                         ] : [

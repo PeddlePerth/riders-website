@@ -139,7 +139,11 @@ def get_rider_schedule(start_date, end_date, person):
     # get data for 2 days prior up to 2 weeks after
 
     tr_filter = get_date_filter(start_date, end_date, 'tour__time_start')
-    tour_rider_qs = TourRider.objects.select_related('tour', 'tour__session', 'person').filter(
+    tour_rider_qs = TourRider.objects.select_related(
+        'tour', 'tour__session', 'person'
+    ).prefetch_related(
+        'tour__riders', 'tour__venues'
+    ).filter(
         person=person, **tr_filter
     ).order_by('tour__time_start')
 
@@ -148,8 +152,8 @@ def get_rider_schedule(start_date, end_date, person):
         key_date = json_datetime(localdate(tr.tour.time_start))
         trs_for_date = trs_by_date.setdefault(key_date, [])
         trs_for_date.append({
-            'tour': tr.tour.to_json(),
-            'session': tr.tour.session.to_json(),
+            'tour': tr.tour.to_json(with_related_data=True, in_editor=False),
+            'session': tr.tour.session.to_json(in_editor=False),
             'tourRider': tr.to_json(),
         })
 
@@ -167,7 +171,7 @@ def get_rider_schedule(start_date, end_date, person):
         'endDate': json_datetime(end_date),
     }
 
-def get_tour_schedule_data(tour_area, tours_date):
+def get_tour_schedule_data(tour_area, tours_date, in_editor=False):
     """ prepare data for TourScheduleEditor """
     date_filter = get_date_filter(tours_date, tours_date, 'time_start')
     tours_qs = Tour.objects.filter(
@@ -176,27 +180,42 @@ def get_tour_schedule_data(tour_area, tours_date):
     ).order_by(
         'time_start', 'tour_type', 'customer_name'
     ).prefetch_related('riders', 'venues').select_related('session')
-    sessions_qs = Session.objects.filter(**date_filter).order_by('time_start', 'session_type').values_list('id', flat=True)
+
+    all_people = Person.objects.in_bulk()
+    # include only riders ON schedule ( + active riders not on schedule - for editor only)
+    sched_riders = set() 
 
     # accumulate only sessions which have tours & tours json at the same time
-    sessions_with_tours_json = {}
-    tours_json = {}
+    session_order = [] # list of session IDs in order
+    sessions_with_tours_json = {} # dict of session ID to session data
+    tours_json = {} # dict of tour ID to tour data
+
     for t in tours_qs:
-        tours_json[t.id] = t.to_json()
+        tours_json[t.id] = t.to_json(with_related_data=True, in_editor=in_editor)
         if not t.session_id in sessions_with_tours_json:
-            sessions_with_tours_json[t.session_id] = t.session.to_json()
+            session_order.append(t.session_id)
+            sess_json = sessions_with_tours_json[t.session_id] = t.session.to_json()
+            sess_json['tour_ids'] = []
+        else:
+            sess_json = sessions_with_tours_json[t.session_id]
+        # build a list of tour IDs for each session, preserving ordering
+        sess_json['tour_ids'].append(t.id)
+        for tr in t.riders.all():
+            sched_riders.add(tr.person_id)
+    
+    if in_editor:
+        # add any active riders not on schedule
+        for r_id, r in all_people.values():
+            if r.active and r.rider_class:
+                sched_riders.add(r_id)
 
     return {
         'sessions': sessions_with_tours_json,
         'tours': tours_json,
-        'session_order': [ sid for sid in sessions_qs if sid in sessions_with_tours_json ],
+        'session_order': session_order,
         'riders': {
-            r.id: {
-                'id': r.id,
-                'phone': r.phone,
-                'title': r.display_name,
-            }
-            for r in Person.objects.filter(rider_class__isnull=False) 
+            r_id: all_people[r_id].to_json(in_editor=in_editor)
+            for r_id in sched_riders
         },
         'venues': {
             v.id: v.to_json() for v in Venue.objects.all()
@@ -361,7 +380,7 @@ def save_tour_schedule(tours_date, schedule_data):
                 my_venues[tv_id].delete()
         
             # update tour itself
-            for field in ('customer_name', 'customer_contact', 'quantity', 'pickup_location', 'bikes', 'notes', 'show_venues'):
+            for field in ('customer_name', 'customer_contact', 'quantity', 'pickup_location', 'bikes', 'notes'):
                 tour.update_field(field, t.get(field), 'user')
             tour.save()
 

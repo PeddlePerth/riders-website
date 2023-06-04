@@ -138,6 +138,21 @@ class Person(MutableDataRecord):
             return 'Account number ending in %s' % (self.bank_acct[:3])
         else:
             return 'Not provided'
+
+    def to_json(self, in_editor=False):
+        data = {
+            'id': self.pk,
+            'title': self.display_name,
+            'phone': self.phone,
+        }
+
+        if in_editor:
+            data.update({
+                'active': self.active,
+                'rider_class': self.rider_class,
+                'rider_class_label': self.rider_class_label(),
+            })
+        return data
     
     exists = True # see middleware.py
 

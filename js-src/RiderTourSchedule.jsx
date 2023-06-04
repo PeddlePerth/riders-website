@@ -45,10 +45,6 @@ const RiderTSBreak = forwardRef(({ data }, ref) => {
 
 const RiderTSTour = forwardRef(({ past, now, tourRider, tour, session, allVenues, allRiders, bikeTypes, tourAreas }, ref) => {
     let duration = (tour.time_end - tour.time_start);
-    var venuesText = null;
-    if (tour.show_venues && tour.venues && tour.venues.length > 0) {
-        venuesText = get_venues_summary(tour, allVenues).join('\n');
-    }
     const ridersNotMe = tour.riders.filter(tr => tr.rider_id != tourRider.rider_id);
     const area = tourAreas ? tourAreas[tour.area_id] : null;
 
@@ -88,7 +84,7 @@ const RiderTSTour = forwardRef(({ past, now, tourRider, tour, session, allVenues
             { (tour.notes && tour.notes.trim()) || venuesText ? 
             <Col className="" xs={12} md={6}>
                 <div className="p-1 bg-info bg-opacity-10 rounded">
-                    { venuesText ? htmlLines(venuesText + '\n\n' + tour.notes) : htmlLines(tour.notes) }
+                    { tour.venue_notes ? htmlLines(tour.venue_notes + '\n\n' + tour.notes) : htmlLines(tour.notes) }
                 </div>
             </Col> : null }
         </Row>

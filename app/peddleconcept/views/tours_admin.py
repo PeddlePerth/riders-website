@@ -41,7 +41,8 @@ def schedule_editor_view(request, tour_area_id=None, tours_date=None):
     jsvars = {
         'urls': {
             'tour_sched_data': reverse('tour_sched_data'),
-            'tours_for': reverse('tours_for', kwargs={'tour_area_id': 'AREA_ID', 'tours_date': 'DATE'}),
+            'tours_for': reverse('tours_for', kwargs={
+                'tour_area_id': tour_area.id, 'tours_date': tours_date.isoformat()}),
         },
         'tour_areas': { area.id: area.to_json() for area in Area.objects.filter(active=True) },
         'admin_url': reverse('admin:peddleconcept_tour_change', args=['TOUR_ID']),

@@ -236,7 +236,15 @@ function TourVenuesEditorV2({ tour, allVenues, onChange }) {
             tv.key = nextVenueKey++;
         }
     });
-    const venuesSummary = get_venues_summary(tour, allVenues);
+    // do naughty thing to make venue text work
+    const auto_values = tour.field_auto_values = (tour.field_auto_values || {});
+    auto_values.venue_notes = get_venues_summary(tour, allVenues).join('\n');
+
+    function updateVenueSummary() {
+        // update the venue text automatically if the venues are changed, and the text has not been changed
+        if (tour.venue_notes == auto_values.venue_notes) 
+            tour.venue_notes = get_venues_summary(tour, allVenues).join('\n');
+    }
 
     return <div className="TourVenuesEditor">
         <Row className="g-0">
@@ -246,9 +254,13 @@ function TourVenuesEditorV2({ tour, allVenues, onChange }) {
                     tv={tv}
                     order={i}
                     allVenues={allVenues}
-                    onChange={onChange}
+                    onChange={() => {
+                        updateVenueSummary();
+                        onChange();
+                    }}
                     onDelete={() => {
                         tour.venues = tour.venues.filter((tva) => tva !== tv);
+                        updateVenueSummary();
                         onChange();
                     }}
                     onDuplicate={() => {
@@ -259,6 +271,7 @@ function TourVenuesEditorV2({ tour, allVenues, onChange }) {
                             notes: tv.notes,
                             duration: tv.duration,
                         });
+                        updateVenueSummary()
                         onChange();
                     }}
                     />,
@@ -268,24 +281,20 @@ function TourVenuesEditorV2({ tour, allVenues, onChange }) {
             setItems={ (items) => {
                 items.forEach((item, index) => item.venue_order = index);
                 tour.venues = items;
+                updateVenueSummary();
                 onChange();
             }}
             /></Col>
             <Col key={2} xs="2">
-                <div key={1}>
-                    <CheckButton size="sm" variant="secondary" text="Custom Venue Text"
-                        className="m-1"
-                        checked={!tour.show_venues}
-                        onChange={(val) => {
-                            tour.show_venues = !val;
-                            tour.notes = updateNotes(tour.notes, val ? venuesSummary : [])
-                            onChange();
-                        }}/>
-                </div>
-                <div key={2}>{ htmlLines(venuesSummary) }</div>
+                <EditableTextField 
+                    type="textarea"
+                    model={tour}
+                    fieldName="venue_notes"
+                    onChange={onChange}
+                />
             </Col>
         </Row>
-    </div>;
+    </div>;//<div key={2}>{ htmlLines(venuesSummary) }</div>
 }
 
 // generate a list of JSON-TourVenues from a VENUE_PRESETS_SETTING item

@@ -109,7 +109,7 @@ class Session(MutableDataRecord):
     def get_title(self):
         return "%s - %s — %s" % (format_time(self.time_start), format_time(self.time_end), self.session_type)
 
-    def to_json(self, with_related_data=True):
+    def to_json(self, in_editor=False):
         data = {
             'id': self.id,
             'time_start': json_datetime(self.time_start),
@@ -117,13 +117,9 @@ class Session(MutableDataRecord):
             'title': self.title or self.get_title(),
             'source_row_state': self.source_row_state,
         }
-
-        if with_related_data:
-            data.update({
-                'tour_ids': list(self.tours.order_by('time_start', 'customer_name').values_list('id', flat=True)),
-                'source_row_id': self.source_row_id,
-                'field_auto_values': self.field_auto_values,
-            })
+        
+        if in_editor:
+            data['field_auto_values'] = self.field_auto_values
 
         return data
 
@@ -152,8 +148,8 @@ class Tour(MutableDataRecord):
     # user fields
     bikes = models.JSONField(blank=True, default=dict, help_text="How many of each type of bike used for this tour. Edit this via the schedule")
     pax = models.PositiveIntegerField(blank=True, null=True, help_text="Number of people on the tour (if applicable)")
-    notes = models.TextField(blank=True, help_text="Notes to show on tour, including any Booking Notes (not including venues)")
-    show_venues = models.BooleanField(blank=True, default=True, help_text='Add automatic venue summary to notes if any venues are defined')
+    notes = models.TextField(blank=True, help_text="Notes to show on tour, including any Booking Notes")
+    venue_notes = models.TextField(blank=True, help_text="Tour venues/activities schedule information")
 
     tour_area = models.ForeignKey(Area, on_delete=models.SET_NULL, null=True)
 
@@ -166,8 +162,8 @@ class Tour(MutableDataRecord):
     def is_cancelled(self):
         return self.source_row_state == 'deleted'
 
-    def to_json(self, with_related_data=True):
-        basic = {
+    def to_json(self, with_related_data=False, in_editor=False):
+        data = {
             'id': self.id,
             'area_id': self.tour_area_id,
             'session_id': self.session_id,
@@ -181,18 +177,23 @@ class Tour(MutableDataRecord):
             'bikes': self.bikes,
             'pax': self.pax,
             'notes': self.notes,
-            'show_venues': self.show_venues,
+            'venue_notes': self.venue_notes,
             'source_row_state': self.source_row_state,
         }
 
         if with_related_data:
-            basic.update({
-                'riders': [ tr.to_json() for tr in self.riders.order_by('-rider_role').all() ],
-                'venues': [ tv.to_json() for tv in sorted(self.venues.all(), key=lambda v: v.time_arrive)],
-                'source_row_id': self.source_row_id,
-                'field_auto_values': self.field_auto_values,
-            })
-        return basic
+            data['riders'] = [ 
+                tr.to_json() 
+                for tr in sorted(self.riders.all(), key=lambda r: r.rider_role, reverse=True)
+            ]
+            data['venues'] = [
+                tv.to_json(in_editor=in_editor)
+                for tv in sorted(self.venues.all(), key=lambda v: v.time_arrive)
+            ]
+
+        if in_editor:
+            data['field_auto_values'] = self.field_auto_values
+        return data
 
 
 RIDER_ROLES = {
@@ -269,15 +270,18 @@ class TourVenue(MutableDataRecord):
                 (self.time_depart - self.time_arrive).total_seconds() // 60
             )
 
-    def to_json(self):
-        return {
+    def to_json(self, in_editor=False):
+        data = {
             'id': self.id,
             'tour_id': self.tour_id,
-            'venue_id': self.venue_id if self.venue else None,
+            'venue_id': self.venue_id if self.venue_id else None,
             'activity': self.activity,
             'duration': (self.time_depart - self.time_arrive).total_seconds() // 60,
             'notes': self.notes,
-            'field_auto_values': self.field_auto_values,
         }
+        if in_editor:
+            data['field_auto_values'] = self.field_auto_values
+        return data
+
 
 

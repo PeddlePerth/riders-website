@@ -30,11 +30,6 @@ function TSCancelledBadge() {
 }
 
 function TSTourRow({ tour, allRiders, allVenues, bikeTypes }) {
-    var venuesText = null;
-    if (tour.show_venues && tour.venues && tour.venues.length > 0) {
-        venuesText = get_venues_summary(tour, allVenues).join('\n');
-    }
-
     return <Row className="TSTourRow g-0 border-bottom">
         <Col key={1} xs={8}>
             <Row className="g-0 h-100">
@@ -75,7 +70,7 @@ function TSTourRow({ tour, allRiders, allVenues, bikeTypes }) {
             </Row>
         </Col>
         <Col key={2} xs={4} className="p-1 text-break">
-            { venuesText ? htmlLines(venuesText + '\n\n' + tour.notes) : htmlLines(tour.notes) }
+            { tour.venue_notes ? htmlLines(tour.venue_notes + '\n\n' + tour.notes) : htmlLines(tour.notes) }
         </Col>
     </Row> ;
 }
