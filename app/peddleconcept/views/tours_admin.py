@@ -12,7 +12,8 @@ from peddleconcept.util import (
     start_of_week
 )
 from peddleconcept.tours.schedules import (
-    get_autoscan_status, get_tour_summary, get_venues_report
+    get_autoscan_status, get_tour_summary, get_venues_report,
+    get_rider_unavailability
 )
 from peddleconcept.tours.rezdy import update_from_rezdy
 from peddleconcept.tours.fringe import update_from_fringe
@@ -96,7 +97,6 @@ def schedules_dashboard_data_view(request):
         'tours': get_tour_summary(start_date, end_date),
     }
     return JsonResponse(data)
-    
 
 @user_passes_test(staff_required)
 @require_http_methods(['POST'])

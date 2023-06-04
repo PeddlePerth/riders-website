@@ -6,6 +6,7 @@ from django.db import migrations, models
 import django.db.models.deletion
 import django.utils.timezone
 import peddleconcept.models.people
+from peddleconcept.tours.schedules import get_venues_summary
 import re
 
 from django.contrib.auth.hashers import is_password_usable
@@ -29,13 +30,13 @@ def make_riders_people(apps, schema_editor):
     for user in users:
 
         if user.is_rider:
-            rider_class = 'rider_standard'
+            rider_class = '10_rider_standard'
             if user.rider_pay_rate == 25:
-                rider_class = 'rider_probationary'
+                rider_class = '00_rider_probationary'
             elif user.rider_pay_rate == 33:
-                rider_class = 'rider_senior'
+                rider_class = '20_rider_senior'
             elif user.rider_pay_rate == 36:
-                rider_class = 'rider_professional'
+                rider_class = '30_rider_professional'
         else:
             rider_class = None
             
@@ -97,6 +98,17 @@ def delete_rider_users(apps, schema_editor):
     PeddleUser.objects.using(db_alias).filter(id__in=rider_users_to_delete).delete()
     print('\nremaining Users:', ', '.join((u.username for u in PeddleUser.objects.using(db_alias).all())))
 
+def update_tour_venue_notes(apps, schema_editor):
+    # move tour venue notes into separate field 'venue_notes'
+    Tour = apps.get_model('peddleconcept', 'Tour')
+    db_alias = schema_editor.connection.alias
+
+    for tour in Tour.objects.using(db_alias).prefetch_related('venues'):
+        if tour.show_venues:
+            tour.venue_notes = get_venues_summary(tour) or ''
+
+        tour.save()
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -156,6 +168,7 @@ class Migration(migrations.Migration):
                             ("generate_pay_report", "generate_pay_report"),
                             ("user", "user"),
                         ],
+                        default="deputy",
                         help_text="External data source",
                         max_length=50,
                     ),
@@ -187,12 +200,18 @@ class Migration(migrations.Migration):
                 (
                     "tour_locations",
                     models.JSONField(
+                        blank=True,
                         default=dict,
                         help_text="JSON list of strings being each tour pickup location included under this area",
                     ),
                 ),
                 ("sort_order", models.IntegerField(blank=True, default=0)),
-                ("active", models.BooleanField(blank=True, default=True)),
+                (
+                    "active",
+                    models.BooleanField(
+                        blank=True, default=True, verbose_name="Visible on website"
+                    ),
+                ),
                 (
                     "deputy_sync_enabled",
                     models.BooleanField(
@@ -342,6 +361,7 @@ class Migration(migrations.Migration):
                 (
                     "email", 
                     models.EmailField(
+                        blank=True,
                         error_messages={
                             "blank": "You must enter an email address",
                             "unique": "Email address already in use",
@@ -355,6 +375,7 @@ class Migration(migrations.Migration):
                 (
                     "phone",
                     models.CharField(
+                        blank=True,
                         error_messages={
                             "blank": "You must enter a phone number",
                             "unique": "Phone number already taken",
@@ -362,12 +383,6 @@ class Migration(migrations.Migration):
                         max_length=30,
                         null=True,
                         unique=True,
-                        validators=[
-                            django.core.validators.RegexValidator(
-                                re.compile("^(\\+614|04|00614)\\d{8}$"),
-                                message="Please provide a valid Australian mobile phone number",
-                            )
-                        ],
                         verbose_name="Contact Phone Number",
                     ),
                 ),
@@ -384,29 +399,13 @@ class Migration(migrations.Migration):
                 (
                     "bank_bsb",
                     models.CharField(
-                        blank=True,
-                        max_length=20,
-                        validators=[
-                            django.core.validators.RegexValidator(
-                                re.compile("^\\d{3}-?\\d{3}$"),
-                                message="BSB must be exactly 6 digits",
-                            )
-                        ],
-                        verbose_name="Bank account BSB",
+                        blank=True, max_length=20, verbose_name="Bank account BSB"
                     ),
                 ),
                 (
                     "bank_acct",
                     models.CharField(
-                        blank=True,
-                        max_length=20,
-                        validators=[
-                            django.core.validators.RegexValidator(
-                                re.compile("^\\d{4,20}$"),
-                                message="Must be a number between 4 and 20 digits",
-                            )
-                        ],
-                        verbose_name="Bank account number",
+                        blank=True, max_length=20, verbose_name="Bank account number"
                     ),
                 ),
                 (
@@ -423,12 +422,12 @@ class Migration(migrations.Migration):
                     models.CharField(
                         blank=True,
                         choices=[
-                            ("rider_probationary", "Probationary Rider (noob)"),
-                            ("rider_standard", "Standard Rider"),
-                            ("rider_senior", "Senior Rider"),
-                            ("rider_professional", "Pro Rider"),
+                            ("00_rider_probationary", "Probationary Rider (noob)"),
+                            ("10_rider_standard", "Standard Rider"),
+                            ("20_rider_senior", "Senior Rider"),
+                            ("30_rider_professional", "Pro Rider"),
                         ],
-                        max_length=20,
+                        max_length=30,
                         null=True,
                     ),
                 ),
@@ -467,7 +466,8 @@ class Migration(migrations.Migration):
             ],
             options={
                 "abstract": False,
-                "verbose_name_plural": "People",
+                "verbose_name": "Person",
+                "verbose_name_plural": "Riders & Deputy Users",
             },
         ),
         migrations.CreateModel(
@@ -1072,7 +1072,7 @@ class Migration(migrations.Migration):
             name="notes",
             field=models.TextField(
                 blank=True,
-                help_text="Notes to show on tour, including any Booking Notes (not including venues)",
+                help_text="Notes to show on tour, including any Booking Notes",
             ),
         ),
         migrations.AlterField(
@@ -1109,15 +1109,6 @@ class Migration(migrations.Migration):
                 on_delete=django.db.models.deletion.SET_NULL,
                 related_name="tours",
                 to="peddleconcept.session",
-            ),
-        ),
-        migrations.AlterField(
-            model_name="tour",
-            name="show_venues",
-            field=models.BooleanField(
-                blank=True,
-                default=True,
-                help_text="Add automatic venue summary to notes if any venues are defined",
             ),
         ),
         migrations.AlterField(
@@ -1414,4 +1405,18 @@ class Migration(migrations.Migration):
         migrations.RunPython(
             delete_rider_users
         ),
+        migrations.AddField(
+            model_name="tour",
+            name="venue_notes",
+            field=models.TextField(
+                blank=True, help_text="Tour venues/activities schedule information"
+            ),
+        ),
+        migrations.RunPython(
+            update_tour_venue_notes
+        ),
+        migrations.RemoveField(
+            model_name="tour",
+            name="show_venues"
+        )
     ]

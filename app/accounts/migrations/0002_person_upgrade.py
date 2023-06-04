@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("accounts", "0001_initial_squashed"),
-        ("peddleconcept", "0002_area_changelog_person_persontoken_roster_rostertour_and_more"),
+        ("peddleconcept", "0002_deputy_models_upgrade"),
     ]
 
     operations = [

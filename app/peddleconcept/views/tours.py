@@ -114,6 +114,8 @@ def tours_data_view(request):
         else:
             return HttpResponseBadRequest()
 
-    data = get_tour_schedule_data(tour_area, tours_date)
+    in_editor = reqdata.get('in_editor', False) and request.user.is_staff
+
+    data = get_tour_schedule_data(tour_area, tours_date, in_editor=in_editor)
     return JsonResponse(data)
 

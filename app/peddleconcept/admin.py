@@ -108,7 +108,9 @@ class PersonAdmin(MyModelAdmin):
         'override_pay_rate', 'email', 'phone', 'last_seen',)
     list_filter = ('active', 'source_row_state', 'email_verified', 'rider_class', 'is_core_rider', 'override_pay_rate')
     ordering = ['-active', '-rider_class']
-    actions = ['activate_selected', 'disable_selected', 'invite_deputy']
+    actions = ['activate_selected', 'disable_selected', 'invite_deputy', 
+        'promote_riders', 'make_core', 'make_non_core',
+    ]
     search_fields = ('display_name', 'first_name', 'last_name', 'email')
 
     fieldsets = (
@@ -127,16 +129,41 @@ class PersonAdmin(MyModelAdmin):
         })
     )
 
-
     @admin.action(description='Archive selected riders')
     def disable_selected(self, request, queryset):
-        num_updated = queryset.update(active=False)
-        messages.success('%d riders disabled' % num_updated)
+        num_updated = queryset.update(active=False, is_core_rider=False, rider_class=None)
+        messages.success(request, '%d riders disabled' % num_updated)
 
     @admin.action(description='Un-archive selected riders')
     def activate_selected(self, request, queryset):
         num_updated = queryset.update(active=True)
-        messages.success('%d riders enabled' % num_updated)
+        messages.success(request, '%d riders enabled' % num_updated)
+
+    @admin.action(description='Make core riders')
+    def make_core(self, request, queryset):
+        num_updated = queryset.filter(rider_class__isnull=False).update(is_core_rider=True)
+        messages.success(request, '%d riders are now core riders' % num_updated)
+
+    @admin.action(description='Make non-core riders')
+    def make_non_core(self, request, queryset):
+        num_updated = queryset.update(is_core_rider=False)
+        messages.success(request, '%d riders are now non-core riders' % num_updated)
+
+    @admin.action(description='Promote riders')
+    def promote_riders(self, request, queryset):
+        num_updated = 0
+        rider_classes = sorted((c[0] for c in Person.RIDER_CLASS_CHOICES))
+        for obj in queryset:
+            if not obj.rider_class:
+                obj.rider_class = rider_classes[0]
+                num_updated += 1
+            else:
+                i = rider_classes.index(obj.rider_class)
+                if i < len(rider_classes) - 1:
+                    obj.rider_class = rider_classes[i + 1]
+                    num_updated += 1
+            obj.save()
+        messages.success(request, '%d of %d riders made into riders or promoted' % (num_updated, queryset.count()))
 
     @admin.display(description='Rider Status')
     def rider_status_html(self, obj):

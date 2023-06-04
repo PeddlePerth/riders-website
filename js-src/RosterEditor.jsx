@@ -10,23 +10,7 @@ const { AVAILABILITY_CHOICES } = require("./RiderAvailabilityAdmin");
 const { TimeInput } = require("./TimeInput");
 const { firstDayOfWeek, format_time_12h, format_iso_date, get_weekday, format_date } = require("./utils");
 
-// use for dragstart event to set rider data (when dragging from availability widge or rider widget on schedule)
-function setRiderDragData(event, rider) {
-    event.dataTransfer.setData("application/json", JSON.stringify({
-        rider_id: rider.rider_id
-    }));
-    //event.dataTransfer.setData("text/plain", rider.display_name);
 
-}
-
-function getRiderFromDrop(event, allRiders) {
-    const data = event.dataTransfer.getData("application/json");
-    try {
-        let json = JSON.parse(data);
-        if (json.rider_id in allRiders) return allRiders[json.rider_id];
-    } catch (e) {}
-    return null;
-}
 const AvailableRider = ({ rider, choices, notes, active }) => 
 <div className={"AvailableRider p-1 me-1 mb-1 fs-6 rounded user-select-none" + (active ? ' active' : '')}
     draggable={active} onDragStart={(e) => setRiderDragData(e, rider)}

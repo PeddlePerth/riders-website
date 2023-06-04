@@ -855,12 +855,19 @@ ul.tips {
 .AvailableRider {
     background-color: #eee;
 }
-.AvailableRider.active {
+.AvailableRider.yes {
     background-color:rgb(186, 255, 172);
 }
-.AvailableRider.active:hover {
+.AvailableRider.yes:hover {
     background-color: rgb(120, 255, 93);
 }
+.AvailableRider.maybe {
+    background-color: rgb(255, 241, 133);
+}
+.AvailableRider.no {
+    background-color: #ddd;
+}
+
 .AvailableRider.error {
     background-color: rgb(255, 147, 65);
 }

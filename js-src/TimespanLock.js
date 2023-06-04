@@ -24,7 +24,7 @@ class TimespanLock {
     }
 
     lock_timespan(start, end) {
-        if (this.is_locked_during(start, end)) return false;
+        if (this.is_locked_during(start, end)) return false; // do not allow overlaps
         var insertAt = this.lock_times.findIndex(([begin, len]) => start >= begin);
         if (insertAt < 0) insertAt = 0;
         this.lock_times.splice(insertAt, 0, [start, end - start]);
@@ -63,6 +63,37 @@ class TimespanLock {
                 return true;
         }
         return false;
+    }
+
+    // test if available for ANY times during specified interval
+    is_available_during(start, end) {
+        if (end === undefined) end = start; // for specific time point
+        if (start > this.start + this.duration || end < this.start) return false; // not available outside time range
+        if (end < start) return false; // not available during negative time
+        for (var timespan of this.lock_times) {
+            if (!timespan_intersects([start, end - start], timespan))
+                return true;
+        }
+        return false;
+    }
+
+    get_timespans() {
+        // return timespans in [start, end] format
+        let prev = [null, this.start], timespans = [];
+        for (var ts of this.lock_times) {
+            if (ts[0] <= prev[1]) {
+                prev[1] = ts[0];
+                continue;
+            }
+            timespans.push(prev);
+            prev = [ts[0], ts[0] + ts[1]];
+        }
+        if (this.start + this.duration <= prev[1]) {
+            prev[1] = null;
+        }
+        timespans.push(prev);
+
+        return timespans;
     }
 
     toString() {

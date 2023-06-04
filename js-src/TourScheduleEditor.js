@@ -5,7 +5,7 @@ const TourRow = require('./TourScheduleRow.js');
 const TimespanLock = require('./TimespanLock.js');
 const { join_bikes, count_bikes } = require('./BikesWidget.js');
 const EditableTextField = require('./EditableTextField.js');
-const { plural, format_time_12h } = require('./utils.js');
+const { plural, format_time_12h, htmlLines } = require('./utils.js');
 const { useMemo, useState } = require('react');
 const { CheckButton } = require('./components.js');
 
@@ -30,79 +30,37 @@ function TourScheduleGroup({ selected, session, onChange, info, children }) {
     </Row>;
 }
 
-function getRiderList(text, allRiders) {
-    let lines = text.split('\n');
-    let riders = [];
-    for (var l of lines) {
-        if (!l) continue;
-        let words = l.split(' ');
-        let found = false;
-        let numName = 0;
-        var name = '';
-        for (var i = 0; i < words.length; i++) {
-            name = (name + ' ' + words[i]).trim().replaceAll('?', '');
-            numName++;
-            let matches = Object.values(allRiders).filter(rider => 
-                rider.title && rider.title.toLowerCase().startsWith(name.toLowerCase())
-            );
-            let exact = matches.filter(rider => rider.title && rider.title.toLowerCase() == name.toLowerCase());
-            if (matches.length == 1 || exact.length == 1) {
-                let match = exact.length == 1 ? exact[0] : matches[0];
-                riders.push([match.id, words.slice(numName).join(' ')]);
-                found = true;
-                break;
-            }
-        }
-        if (!found) riders.push([null, l]);
-    }
-    console.log(riders);
-    return riders;
+// use for dragstart event to set rider data (when dragging from availability widge or rider widget on schedule)
+function setRiderDragData(event, rider) {
+    event.dataTransfer.setData("application/json", JSON.stringify({
+        rider_id: rider.rider_id
+    }));
+    //event.dataTransfer.setData("text/plain", rider.display_name);
+
 }
 
-function AvailableRidersInput({ allRiders, onChange }) {
-    const [model, setModel] = useState({text: ''});
-    const [riderList, setRiderList] = useState([]);
-
-    return <div className="border rounded d-inline-block">
-        <div className="p-1">Paste list of riders & notes from availability sheet below and fix any errors.</div>
-        <Row xs={2} className="g-0">
-            <Col className="p-2">
-                <EditableTextField style={{minHeight: '50px'}}
-                type="textarea"
-                model={model}
-                fieldName="text"
-                onCommit={() => {
-                    let lines = [];
-                    for (var l of model.text.trim().split('\n')) {
-                        let line = l.trim();
-                        if (line) lines.push(line);
-                    }
-                    model.text = lines.join('\n');
-                    let list = getRiderList(model.text, allRiders)
-                    setRiderList(list);
-                    onChange(list.filter(r => r[0] != null));
-                }}
-                />
-            </Col>
-            <Col className="p-2">
-                <div>
-                    { riderList.map(([rider, note], i) => 
-                    <div key={i}>
-                        <b>{ rider ? allRiders[rider].title : 'ERROR' }</b>&nbsp;{ note }
-                    </div>)}
-                </div>
-            </Col>
-        </Row>
-    </div>;
+function getRiderFromDrop(event, allRiders) {
+    const data = event.dataTransfer.getData("application/json");
+    try {
+        let json = JSON.parse(data);
+        if (json.rider_id in allRiders) return allRiders[json.rider_id];
+    } catch (e) {}
+    return null;
 }
 
-const AvailableRider = ({ rider, notes, active, error }) => 
+const AvailableRider = ({ rider, notes, state }) => 
 <div className={"AvailableRider p-1 me-1 mb-1 fs-6 rounded user-select-none d-inline-block" + 
-    (active ? ' active' : '') + (error ? ' error' : '')}
-    draggable={active} onDragStart={(e) => setRiderDragData(e, rider)}
+    (state ? ' ' + state : '')} // state is 'yes', 'no', 'maybe', 'error'
+    draggable={state != 'error'} onDragStart={(e) => setRiderDragData(e, rider)}
     >
-    <span key={0} className="fw-bold">{rider.title}</span>&nbsp;
-    <span key={1} className="text-muted">{notes}</span>
+    { rider.is_core_rider ? <span className="bi-fire text-danger me-1"></span> : null }
+    { rider.has_deputy ? <span className="bi-phone-vibrate-fill text-primary me-1"></span> : null }
+    { rider.rider_class ? (rider.rider_class > '1' ? <span className="fw-bold text-success">{
+        (rider.rider_class > '3' ? '$$' : '') +
+        (rider.rider_class > '2' ? '$' : '')
+     }</span> : <Badge bg="info">NOOB</Badge>) : null }
+    <span key={0} className="ms-1 fw-bold">{rider.title}</span>&nbsp;
+    <span key={1} className="text-muted">{htmlLines(notes)}</span>
 </div>;
 
 class TourScheduleEditor extends React.Component {
@@ -115,16 +73,16 @@ class TourScheduleEditor extends React.Component {
             availableRiders: [],
             conflictRiders: {},
             riderTimes: {},
+            riderTimesUnavail: {},
             selectedSess: null,
         };
 
-        let [riderTimes, conflictRiders, schedRiders] = this.getRiderTimeLocks();
+        let [riderTimes, riderTimesUnavail, conflictRiders, availRiders] = this.getRiderTimeLocks();
         this.state.riderTimes = riderTimes;
+        this.state.riderTimesUnavail = riderTimesUnavail;
         this.state.conflictRiders = conflictRiders;
-        
-        for (var rider_id of Object.keys(schedRiders)) {
-            this.state.availableRiders.push([rider_id, 'from schedule']);
-        }
+        // show available riders in order: by availability, then core riders, then by rider class
+        this.state.availableRiders = availRiders;
 
         // add riders on the schedule to the availability list
         this.onDataChange = this.onDataChange.bind(this);
@@ -146,28 +104,95 @@ class TourScheduleEditor extends React.Component {
             last_session_end = this.props.sessions[last_session_id].time_end + 1;
         }
 
-        let riderTimes = {}, conflictRiders = {};
+        // riderTimes is a TimespanLock for each rider to prevent double bookings
+        let riderTimes = {};
+        let riderTimesUnavail = {}; // track timespans where riders are unavailable (locked where available)
+        // conflictRiders is dict of riders with conflicts
+        let conflictRiders = {}; 
+
         Object.values(this.props.riders).forEach(r => {
             riderTimes[r.id] = new TimespanLock(first_session_start, last_session_end);
+            riderTimesUnavail[r.id] = new TimespanLock(first_session_start, last_session_end);
+            if (r.active != true || r.rider_class == null) {
+                riderTimesUnavail.lock_timespan(first_session_start, last_session_end);
+            }
         });
 
-        let schedRiders = {};
-        // account for existing TourRiders in schedule data
         for (var tour_id of Object.keys(this.props.tours)) {
             let t = this.props.tours[tour_id];
             for (var r of t.riders) {
                 let rt = riderTimes[r.rider_id];
                 if (rt.is_locked_during(t.time_start, t.time_end)) {
+                    // conflict with another tour
                     let c = conflictRiders[r.rider_id] = (conflictRiders[r.rider_id] || []);
-                    c.push([t.time_start, t.time_end]);
+                    c.push(`tour conflict from ${format_time_12h(t.time_start)} to ${format_time_12h(t.time_end)}`);
                 }
+
                 rt.lock_timespan(t.time_start, t.time_end);
-                schedRiders[r.rider_id] = true;
             }
         }
 
-        return [riderTimes, conflictRiders, schedRiders];
-    } 
+        // account for rider unavailability and check for conflicts with the prior tour schedule
+        for (var [rider_id, time_off] of Object.entries(this.props.rider_time_off)) {
+            if (!(rider_id in riderTimesUnavail)) continue;
+            
+            for (var ts of time_off) {
+                if (ts.tour_id != null && ts.tour_id in this.props.tours) {
+                    // the unavailability is specifically due to a tour which is on this schedule page
+                    // therefore we ignore it here - will be dealt with above (see riderTimes)
+                    continue;
+                }
+                let avl_start = ts.start < first_session_start ? first_session_start : ts.start;
+                let avl_end = ts.end > last_session_end ? last_session_end : ts.end;
+
+                // lock times when unavailable - check for overlaps and make sure all unavailabilities are locked
+                if (riderTimesUnavail[rider_id].is_locked_during(avl_start, avl_end)) {
+                    riderTimesUnavail[rider_id].unlock_timespan(avl_start, avl_end);
+                }
+                riderTimesUnavail[rider_id].lock_timespan(avl_start, avl_end); 
+                
+                // check for locked times when on tours
+                if (riderTimes[rider_id].is_locked_during(avl_start, avl_end)) {
+                    // rider unavailable during some scheduled tour
+                    let c = conflictRiders[rider_id] = (conflictRiders[rider_id] || []);
+                    c.push(`unavailable from ${format_time_12h(ts.start)} to ${format_time_12h(ts.end)}`);
+                }
+            }
+        }
+
+        // list of avialable rider data: [rider_id, status(yes/no/maybe), description(str), rating(int)]
+        var availRiders = Object.keys(this.props.riders).map((rider_id) => {
+            let rdUnavail = riderTimesUnavail[rider_id];
+            if (rdUnavail.lock_times.length == 0) {
+                return [rider_id, 'yes', '', 100];
+            } else if (!rdUnavail.is_available_during(first_session_start, last_session_end)) {
+                return [rider_id, 'no', 'not available', 0];
+            }
+            let unavailTimes = rdUnavail.get_timespans();
+            let notes = unavailTimes.map(ts => {
+                if (ts[0] == null) return `before ${format_time_12h(ts[1])}`;
+                else if (ts[1] == null) return `after ${format_time_12h(ts[0])}`;
+                else return `from ${format_time_12h(ts[0])} to ${format_time_12h(ts[1])}`;
+            });
+            return [rider_id, 'maybe', notes, 10];
+        });
+
+        availRiders = availRiders.sort(
+            (a, b) => {
+                if (a[3] != b[3]) return b[3] - a[3]; // by availability preference
+                let rider_a = this.props.riders[a[0]], rider_b = this.props.riders[b[0]];
+                if (rider_a.is_core_rider != rider_b.is_core_rider) 
+                    return rider_a.is_core_rider ? -1 : 1;
+                if (rider_a.has_deputy != rider_b.has_deputy)
+                    return rider_a.has_deputy ? -1 : 1;
+                if (rider_a.rider_class != rider_b.rider_class) 
+                    return rider_a.rider_class > rider_b.rider_class ? -1 : 1;
+                return 0;
+            }
+        );
+
+        return [riderTimes, riderTimesUnavail, conflictRiders, availRiders];
+    }
 
     // handle text data changes to tour rows
     onDataChange(row_id, field_name, value) {
@@ -175,9 +200,13 @@ class TourScheduleEditor extends React.Component {
         this.props.onEdit();
     }
 
-    canAddRider(rider_id, time_start, time_end) {
+    canAddRider(rider_id, time_start, time_end, notUnavailable) {
         // check if rider can be added to _this_ tour
         if (time_start != null) {
+            if (notUnavailable) {
+                if (this.state.riderTimesUnavail[rider_id].is_locked_during(time_start, time_end))
+                    return false;
+            }
             return !this.state.riderTimes[rider_id].is_locked_during(time_start, time_end);
         }
 
@@ -195,11 +224,14 @@ class TourScheduleEditor extends React.Component {
 
         t.riders = t.riders.concat([{ rider_id: rider_id, rider_role: null }]);
         
-        if (rider_id in this.state.conflictRiders) {
-            let [riderTimes, conflictRiders, schedRiders] = this.getRiderTimeLocks();
+        if (rider_id in this.state.conflictRiders ||
+            this.state.riderTimesUnavail[rider_id].is_locked_during(t.time_start, t.time_end)) {
+            let [riderTimes, riderTimesUnavail, conflictRiders, availRiders] = this.getRiderTimeLocks();
             this.setState({
                 riderTimes: riderTimes,
+                riderTimesUnavail: riderTimesUnavail,
                 conflictRiders: conflictRiders,
+                availableRiders: availRiders,
             });
         } else {
             this.state.riderTimes[rider_id].lock_timespan(t.time_start, t.time_end);
@@ -213,10 +245,12 @@ class TourScheduleEditor extends React.Component {
         t.riders = t.riders.filter(el => (el.rider_id != rider_id));
 
         if (rider_id in this.state.conflictRiders) {
-            let [riderTimes, conflictRiders, schedRiders] = this.getRiderTimeLocks();
+            let [riderTimes, riderTimesUnavail, conflictRiders, availRiders] = this.getRiderTimeLocks();
             this.setState({
                 riderTimes: riderTimes,
+                riderTimesUnavail: riderTimesUnavail,
                 conflictRiders: conflictRiders,
+                availableRiders: availRiders,
             });
         } else {
             this.state.riderTimes[rider_id].unlock_timespan(t.time_start, t.time_end);
@@ -253,43 +287,29 @@ class TourScheduleEditor extends React.Component {
                 { Object.keys(this.state.conflictRiders).length > 0 ? <>
                     <div className="fs-5 fw-bold mb-1 text-danger">Rider Conflicts</div>
                     { Object.entries(this.state.conflictRiders).map(([rider_id, conflicts], i) =>
-                        conflicts.map(([timeStart, timeEnd], j) => <AvailableRider
+                        conflicts.map((notes, j) => <AvailableRider
                             key={j}
-                            rider={this.props.riders[rider_id]} error
-                            notes={`between ${format_time_12h(timeStart)} and ${format_time_12h(timeEnd)}`} />)
+                            rider={this.props.riders[rider_id]}
+                            state="error"
+                            notes={notes} />)
                     ) }
                 </> : null }
-                <div className="fs-5 fw-bold mb-1">Available Riders</div>
-
-                { this.state.availableRiders.length > 0 ? 
-                    <> 
-                        <div className="fs-5 mb-1">
-                            { this.state.selectedSess ? 
-                            <span className="text-highlight">
-                                {format_time_12h(sess.time_start)}&nbsp;-&nbsp;
-                                {format_time_12h(sess.time_end)}
-                            </span> : 'All day'}
-                        </div>
-                        {this.state.availableRiders.map(
-                        ([riderId, notes]) =>
-                            <AvailableRider key={riderId}
-                                rider={this.props.riders[riderId]}
-                                notes={notes}
-                                active={sess ? this.canAddRider(riderId, sess.time_start, sess.time_end) : true}
-                            />
-                        )}
-                </> : <>
-                    <Badge className="fs-6 mb-1" bg="warning">Rider availability unknown</Badge>
-                </>
-                }
-                <AvailableRidersInput allRiders={this.props.riders} onChange={(val) => {
-                    let avlRiders = {};
-                    val.forEach(([id, note]) => avlRiders[id] = note);
-                    Object.values(this.props.tours).forEach(
-                        t => t.riders.forEach(
-                            tr => (tr.rider_id in avlRiders) ? null : avlRiders[tr.rider_id] = 'from schedule'));
-                    this.setState({ availableRiders: Object.entries(avlRiders) })
-                }} />
+                <div key={1} className="fs-5 fw-bold mb-1">Available Riders</div>
+                <div key={2} className="fs-5 mb-1">
+                    { this.state.selectedSess ? 
+                    <span className="text-highlight">
+                        {format_time_12h(sess.time_start)}&nbsp;-&nbsp;
+                        {format_time_12h(sess.time_end)}
+                    </span> : 'All day'}
+                </div>
+                { this.state.availableRiders.map(r => <AvailableRider 
+                        key={r[0]} 
+                        rider={this.props.riders[r[0]]} 
+                        state={r[1] != 'no' && sess != null ? 
+                            (this.canAddRider(r[0], sess.time_start, sess.time_end, true) ? 'yes' : null)
+                            : r[1]}
+                        notes={r[2]}
+                    />)}
             </div>
             </Col> : null }
 

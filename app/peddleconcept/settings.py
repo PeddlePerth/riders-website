@@ -137,10 +137,10 @@ def get_deputy_api_setting():
 
 def get_rider_payrate_setting():
     return get_setting_or_default(RIDER_PAYRATE_SETTING, {
-        'rider_probationary': 25,
-        'rider_standard': 30,
-        'rider_senior': 33,
-        'rider_professional': 36,
+        '00_rider_probationary': 25,
+        '10_rider_standard': 30,
+        '20_rider_senior': 33,
+        '30_rider_professional': 36,
     })
 
 def get_setting(setting_name):

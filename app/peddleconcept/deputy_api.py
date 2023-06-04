@@ -6,6 +6,7 @@ from peddleconcept.settings import get_deputy_api_setting, DEPUTY_API_SETTING
 from peddleconcept.models import Person, Area
 from peddleconcept.util import log_response
 from django.contrib import messages
+from datetime import datetime
 
 from peddleconcept.deputy_objects import *
 
@@ -178,3 +179,53 @@ class DeputyAPI:
         
         ChangeLog.objects.bulk_create(changelogs)
         logger.info('Bulk area update in Deputy: updated %d, created %d' % (num_updated, num_created))
+
+    def query_leave_unavailability(self, avl_date):
+        """
+        Run two Resource API queries: Leave and EmployeeAvailability.
+        Returns all leave for all employees during that period in the form of:
+        { employee_id: [(start_time_unix, end_time_unix, comment), ...] }
+        """
+
+        # leave is based on both start and end date
+        dpt_leave = self.post('api/v1/resource/Leave/QUERY', {
+            "search": {
+                "s1": {"field": "DateStart", "type": "le", "data": avl_date.isoformat()}, # AND
+                "s2": {"field": "DateEnd", "type": "ge", "data": avl_date.isoformat()},
+            },
+        })
+        # availability is based on schedule but entries are generated for each calculated occurence date
+        dpt_unavail = self.post('api/v1/resource/EmployeeAvailability/QUERY', {
+            "search": {
+                "s1": {"field": "Date", "type": "eq", "data": avl_date.isoformat()},
+            },
+        })
+
+        employee_time_off = {}
+        for leave in dpt_leave:
+            emp_id = str(leave['Employee'])
+            emp_time = employee_time_off.setdefault(emp_id, [])
+            comment = 'on leave'
+            if leave['Comment']:
+                comment += ' (%s)' % leave['Comment']
+            emp_time.append(
+                ( 
+                    datetime.fromtimestamp(leave['Start']), datetime.fromtimestamp(leave['End']),
+                    comment
+                )
+            )
+
+        for avail in dpt_unavail:
+            emp_id = str(avail['Employee'])
+            emp_time = employee_time_off.setdefault(emp_id, [])
+            comment = 'unavailable'
+            if avail['Comment']:
+                comment += ' (%s)' % avail['Comment']
+            emp_time.append(
+                ( 
+                    datetime.fromtimestamp(avail['StartTime']), datetime.fromtimestamp(avail['EndTime']),
+                    comment
+                )
+            )
+        
+        return employee_time_off

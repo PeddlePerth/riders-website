@@ -64,12 +64,12 @@ class Person(MutableDataRecord):
 
     # Rider specific data
     RIDER_CLASS_CHOICES = [
-        ('rider_probationary', 'Probationary Rider (noob)'),
-        ('rider_standard', 'Standard Rider'),
-        ('rider_senior', 'Senior Rider'),
-        ('rider_professional', 'Pro Rider'),
+        ('00_rider_probationary', 'Probationary Rider (noob)'),
+        ('10_rider_standard', 'Standard Rider'),
+        ('20_rider_senior', 'Senior Rider'),
+        ('30_rider_professional', 'Pro Rider'),
     ]
-    rider_class = models.CharField(max_length=20, null=True, blank=True, choices=RIDER_CLASS_CHOICES)
+    rider_class = models.CharField(max_length=30, null=True, blank=True, choices=RIDER_CLASS_CHOICES)
     is_core_rider = models.BooleanField(blank=True, default=False)
     override_pay_rate = models.PositiveIntegerField(null=True, blank=True,
         help_text='Override pay rate for specific rider - LEAVE BLANK unless you are sure!')
@@ -151,6 +151,8 @@ class Person(MutableDataRecord):
                 'active': self.active,
                 'rider_class': self.rider_class,
                 'rider_class_label': self.rider_class_label(),
+                'is_core_rider': self.is_core_rider,
+                'has_deputy': self.has_deputy_account,
             })
         return data
     

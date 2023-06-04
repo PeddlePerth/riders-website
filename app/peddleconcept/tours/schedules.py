@@ -4,6 +4,7 @@ import math
 from peddleconcept.models import *
 from peddleconcept.util import *
 from peddleconcept.settings import *
+from peddleconcept.deputy_api import DeputyAPI
 from django.utils.timezone import localdate, localtime
 from datetime import timedelta
 
@@ -205,11 +206,11 @@ def get_tour_schedule_data(tour_area, tours_date, in_editor=False):
     
     if in_editor:
         # add any active riders not on schedule
-        for r_id, r in all_people.values():
+        for r_id, r in all_people.items():
             if r.active and r.rider_class:
                 sched_riders.add(r_id)
 
-    return {
+    data = {
         'sessions': sessions_with_tours_json,
         'tours': tours_json,
         'session_order': session_order,
@@ -225,6 +226,23 @@ def get_tour_schedule_data(tour_area, tours_date, in_editor=False):
         'tours_date': json_datetime(tours_date),
         'tours_date_formatted': tours_date.strftime("%a %d/%m"),
     }
+
+    if in_editor:
+        rider_times_off = get_rider_unavailability(tours_date)
+        unavail_json = {}
+        for r_id, times_off in rider_times_off.items():
+            t_json = unavail_json[r_id] = []
+            for ts in times_off:
+                t_json.append({
+                    'start': json_datetime(ts[0]),
+                    'end': json_datetime(ts[1]),
+                    #'comment': ts[2],
+                    'tour_id': ts[3] if len(ts) == 4 else None,
+                })
+                
+        data['rider_time_off'] = unavail_json
+    return data
+
 
 def get_tour_summary(start_date, end_date):
     """ returns a list of tours with type, quantity/pax, bikes, num. riders needed/allocated """
@@ -451,5 +469,38 @@ def get_venues_report(start_date, end_date):
 
     return venues
 
+def get_rider_unavailability(tours_date):
+    """ query Deputy API and tour schedules to determine rider availability on the given date """
+    api = DeputyAPI()
 
+    deputy_riders = {
+        r.source_row_id: r
+        for r in Person.objects.filter(
+            active=True, rider_class__isnull=False,
+            source='deputy', source_row_id__isnull=False, source_row_state='live',
+        )
+    }
 
+    tour_riders = TourRider.objects.select_related('tour').filter(
+        **get_date_filter(tours_date, tours_date, 'tour__time_start')
+    )
+
+    try:
+        dpt_employee_time_off = api.query_leave_unavailability(tours_date)
+        rider_unavail = {}
+        for emp_id, emp_time in dpt_employee_time_off.items():
+            if not emp_id in deputy_riders:
+                logger.warning("Unavailable Deputy employee id %s not found among active riders in DB" % emp_id)
+                continue
+            rider_unavail[deputy_riders[emp_id].id] = emp_time
+    except Exception as e:
+        logger.error("Error processing Deputy unavailabilities: %s: %s" % (type(e).__name__, str(e)))
+        rider_unavail = {}
+    
+    for tr in tour_riders:
+        emp_time = rider_unavail.setdefault(tr.person_id, [])
+        emp_time.append(
+            ( tr.tour.time_start, tr.tour.time_end, 'already on tours', tr.tour.id )
+        )
+    
+    return rider_unavail

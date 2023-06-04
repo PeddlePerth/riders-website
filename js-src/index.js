@@ -18,6 +18,7 @@ function load_schedule_editor() {
     const extraPostData = {
         tours_date: window.jsvars.tours_date,
         tour_area_id: window.jsvars.tour_area_id,
+        in_editor: true,
     };
 
     ReactDOM.render(
