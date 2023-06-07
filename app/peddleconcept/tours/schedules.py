@@ -227,22 +227,22 @@ def get_tour_schedule_data(tour_area, tours_date, in_editor=False):
         'tours_date_formatted': tours_date.strftime("%a %d/%m"),
     }
 
-    if in_editor:
-        rider_times_off = get_rider_unavailability(tours_date)
-        unavail_json = {}
-        for r_id, times_off in rider_times_off.items():
-            t_json = unavail_json[r_id] = []
-            for ts in times_off:
-                t_json.append({
-                    'start': json_datetime(ts[0]),
-                    'end': json_datetime(ts[1]),
-                    #'comment': ts[2],
-                    'tour_id': ts[3] if len(ts) == 4 else None,
-                })
-                
-        data['rider_time_off'] = unavail_json
     return data
 
+def get_rider_time_off_json(tours_date):
+    rider_times_off = get_rider_unavailability(tours_date)
+    unavail_json = {}
+    for r_id, times_off in rider_times_off.items():
+        t_json = unavail_json[r_id] = []
+        for ts in times_off:
+            t_json.append({
+                'start': json_datetime(ts[0]),
+                'end': json_datetime(ts[1]),
+                #'comment': ts[2],
+                'tour_id': ts[3] if len(ts) == 4 else None,
+            })
+
+    return unavail_json
 
 def get_tour_summary(start_date, end_date):
     """ returns a list of tours with type, quantity/pax, bikes, num. riders needed/allocated """

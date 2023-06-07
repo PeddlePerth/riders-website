@@ -317,12 +317,29 @@ class TourScheduleEditor extends React.Component {
                 <Stack className="TourScheduleEditor" direction="vertical">
                 <Stack direction="horizontal" className="editor-menu my-1 py-1 position-sticky bg-light"
                     style={{ top: '0', height: '48px', zIndex: '11' }}>
-                    <Button variant="primary" onClick={() => this.props.onSave(null, (ok) => {
+                    <Button key={2} variant="primary" className="me-1" 
+                    onClick={() => this.props.onSave('close', (ok, response) => {
                         if (ok) window.location.href = window.jsvars.urls.tours_for;
+                        return {
+                            ...this.props, // ignore empty POST data response and re-use already loaded data
+                        };
                     })}>
                         Save &amp; Return to Schedule
                     </Button>
-                    { this.props.ajaxToolbar }
+                    <Button key={1} variant={ this.props.isSaved ? 'secondary' : 'success' } className="me-1"
+                        onClick={() => this.props.onSave('save', (ok, response) => {
+                            if (ok) {
+                                return {
+                                    ...response,
+                                    rider_time_off: this.props.rider_time_off,
+                                };
+                            } else {
+                                return { ... this.props }; // keep existing data but show save error
+                            }
+                        })}
+                    >Save</Button>
+                    <Badge bg="info" key={3}>{ this.props.saveStatus }</Badge>
+                    { this.props.errorMsg ? <Badge bg="danger" key={4}>{ this.props.errorMsg }</Badge> : null }
                     <CheckButton checked={this.state.availability} variant="secondary" className="ms-1"
                         onChange={(val) => this.setState({availability: val})} text="Show Available Riders" />
                 </Stack>

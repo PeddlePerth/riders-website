@@ -45,8 +45,10 @@ class AjaxDataComponent extends Component {
             action: verb,
         };
         post_data(this.props.postUrl, postData, (ok, response) => {
+            if (onComplete) {
+                response = onComplete(ok, response);
+            }
             this.onDataLoaded(ok, response); 
-            if (onComplete) onComplete(ok);
         });
     }
 
@@ -82,8 +84,11 @@ class AjaxDataComponent extends Component {
 
     componentDidMount() {
         window.onbeforeunload = this.beforeUnload;
-        post_data(this.props.postUrl, this.props.extraPostData, this.onDataLoaded);
-        console.log("loading Ajax data from " + this.props.postUrl);
+        post_data(this.props.postUrl, {
+            ...this.props.extraPostData,
+            action: 'open',
+        }, this.onDataLoaded);
+        //console.log("loading Ajax data from " + this.props.postUrl);
     }
 
     componentWillUnmount() {
@@ -99,7 +104,7 @@ class AjaxDataComponent extends Component {
             createElement(Button, {
                 className: 'SaveBtn mx-1',
                 variant: this.isSaved() ? 'secondary' : 'success',
-                onClick: () => this.onSave(),
+                onClick: () => this.onSave('save'),
                 key: 'save',
             }, 'Save'),
             this.props.extraToolbar,
@@ -116,6 +121,9 @@ class AjaxDataComponent extends Component {
                     onEdit: this.onEdit,
                     onSave: this.onSave,
                     ajaxToolbar: toolbarItems,
+                    saveStatus: saveStatus,
+                    isSaved: this.isSaved(),
+                    errorMsg: this.state.errorMsg,
                 }) : <div className="text-center p-2"><Spinner animation="border"/></div>,
         );
     }

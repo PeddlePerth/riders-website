@@ -11,7 +11,8 @@ from peddleconcept.util import (
     json_datetime, get_iso_date, from_json_date, today
 )
 from peddleconcept.tours.schedules import (
-    get_tour_schedule_data, get_rider_schedule, save_tour_schedule
+    get_tour_schedule_data, get_rider_schedule, save_tour_schedule,
+    get_rider_time_off_json,
 )
 
 from .base import render_base
@@ -102,6 +103,7 @@ def tours_data_view(request):
     if not 'tours_date' in reqdata or not 'tour_area_id' in reqdata:
         return HttpResponseBadRequest('Missing tour_area_id or tours_date')
     tours_date = from_json_date(reqdata['tours_date'])
+    action = reqdata.get('action')
 
     try:
         tour_area = Area.objects.get(active=True, id=reqdata['tour_area_id'])
@@ -115,7 +117,13 @@ def tours_data_view(request):
             return HttpResponseBadRequest()
 
     in_editor = reqdata.get('in_editor', False) and request.user.is_staff
+    if in_editor and action == 'close':
+        return JsonResponse({}) # empty success response when closing editor
 
     data = get_tour_schedule_data(tour_area, tours_date, in_editor=in_editor)
+    
+    if in_editor and action == 'open':
+        data['rider_time_off'] = get_rider_time_off_json(tours_date)
+
     return JsonResponse(data)
 
