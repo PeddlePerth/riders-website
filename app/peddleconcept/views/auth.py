@@ -85,7 +85,7 @@ def rider_login_verify_view(request):
                     request.session['person_id'] = str(obj.id)
                     return HttpResponseRedirect(reverse('my_profile'))
                 else:
-                    form.add_error('auth_code', 'Invalid authentication code or code expired. Please try again.')
+                    form.add_error('auth_code', 'Invalid authentication code, code expired, or too many failed attempts. Please try again.')
     else:
         form = AuthCodeForm()
     

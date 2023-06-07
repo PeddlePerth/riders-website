@@ -21,14 +21,13 @@ def get_random_code(length):
 
 def send_account_auth_email(request, name, email):
     """ Generate random token, store token in session, and send email - with timeout to prevent accidental spam """
-    token = get_random_code(AUTH_TOKEN_LENGTH)
+    prev_time = int(request.session.get('auth_token_timestamp', 0))
     now = int(datetime.now().timestamp())
-    if 'auth_token' in request.session:
-        # check timeout on existing token
-        prev_time = int(request.session.get('auth_token_timestamp', 0))
-        if now < prev_time + 10:
-            messages.warning(request, 'Cannot send auth code emails more than once every %d seconds' % AUTH_EMAIL_RETRY_SECONDS)
-            return False
+    if now < prev_time + 10:
+        messages.warning(request, 'Cannot send auth code emails more than once every %d seconds' % AUTH_EMAIL_RETRY_SECONDS)
+        return False
+
+    token = make_auth_token(request)
 
     ctx = {
         'name': name,
@@ -44,8 +43,6 @@ def send_account_auth_email(request, name, email):
             [email],
             html_message = render_to_string('email/email_auth.html', ctx),
         )
-        request.session['auth_token'] = token
-        request.session['auth_token_timestamp'] = str(now)
 
         messages.success(request, 'Authentication code sent. Please check your inbox.')
     except SMTPException as e:
@@ -57,6 +54,15 @@ def send_account_auth_email(request, name, email):
     
     return bool(ok)
 
+def make_auth_token(request):
+    token = get_random_code(AUTH_TOKEN_LENGTH)
+    now = int(datetime.now().timestamp())
+    request.session['auth_token'] = token
+    request.session['auth_token_timestamp'] = str(now)
+    request.session['auth_token_attempts'] = 0
+    return token
+
+
 def validate_auth_token(request, token):
     """ Validate token for a particular request """
     if not ('auth_token' in request.session and 'auth_token_timestamp' in request.session):
@@ -65,10 +71,12 @@ def validate_auth_token(request, token):
     now = int(datetime.now().timestamp())
     sess_token = request.session['auth_token']
     token_timestamp = int(request.session['auth_token_timestamp'])
+    num_attempts = int(request.session['auth_token_attempts'])
 
-    if sess_token == token and now < token_timestamp + AUTH_TOKEN_VALID_MINUTES * 60:
+    if sess_token == token and now < token_timestamp + AUTH_TOKEN_VALID_MINUTES * 60 and num_attempts < 10:
         del request.session['auth_token']
         del request.session['auth_token_timestamp']
+        del request.session['auth_token_attempts']
         return True
 
     return False

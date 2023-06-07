@@ -87,7 +87,7 @@ def rider_profile_verify_email_view(request):
 
                     return HttpResponseRedirect(reverse('my_profile'))
                 else:
-                    form.add_error('auth_code', 'Invalid authentication code or code expired. Please try again.')
+                    form.add_error('auth_code', 'Invalid authentication code, code expired, or too many failed attempts. Please try again.')
     else:
         form = AuthCodeForm()
 
@@ -230,7 +230,7 @@ def rider_migrate_verify_view(request):
 
                     return HttpResponseRedirect(reverse('my_profile'))
                 else:
-                    form.add_error('auth_code', 'Invalid authentication code or code expired. Please try again.')
+                    form.add_error('auth_code', 'Invalid authentication code, code expired, or too many failed attempts. Please try again.')
     else:
         form = AuthCodeForm()
 
@@ -363,7 +363,7 @@ def rider_setup_verify_view(request):
                         messages.error(request, 'Error creating Deputy account! Please contact an administrator.')
 
                 else:
-                    form.add_error('auth_code', 'Invalid authentication code or code expired. Please try again.')
+                    form.add_error('auth_code', 'Invalid authentication code, code expired, or too many failed attempts. Please try again.')
     else:
         form = AuthCodeForm()
 
