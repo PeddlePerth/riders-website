@@ -254,7 +254,7 @@ def iterate_once_more(iterable, last_item):
 def abbreviate(name):
     words = name.split(' ')
     if len(words) > 1:
-        return "".join([n[0].upper() for n in name.split(' ')])
+        return "".join((n[0].upper() for n in name.split() if len(n) > 0))
     else:
         return name
 
