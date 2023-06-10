@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from datetime import date, datetime, time
+import json
 import logging
 
 from peddleconcept.util import json_datetime
@@ -142,6 +143,9 @@ class MutableDataRecord(models.Model):
         can_auto_update = auto_value == actual_value or not has_auto_value
         if has_auto_value and isinstance(actual_value, (date, datetime)):
             can_auto_update = auto_value == json_datetime(actual_value)
+        elif has_auto_value and isinstance(actual_value, (dict, list)):
+            # inefficiently compare values
+            can_auto_update = json.dumps(auto_value) == json.dumps(actual_value)
 
         changed = False
         if can_auto_update or not is_auto_update:

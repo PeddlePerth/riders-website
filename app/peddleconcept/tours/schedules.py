@@ -308,6 +308,86 @@ def get_tour_summary(start_date, end_date):
 
     return tours_ordered
 
+def get_tour_rosters(tours_date, area):
+    """ Generate Roster instances for the tour schedule for given date/area """
+    setup_time_mins = get_setting_or_default('warehouse_setup_time_minutes', 45)
+
+    tour_riders = TourRider.objects.filter(
+        **get_date_filter(tours_date, tours_date, 'tour__time_start'),
+        tour__area = area,
+        person__source_row_state='live',
+        person__source_row_id__isnull=False,
+    ).select_related('tour', 'tour__area', 'person').order_by(
+        'tour__time_start',
+    )
+
+    riders_by_srid = {}
+    rider_tours = {}
+    for tr in tour_riders:
+        tours_list = rider_tours.setdefault(tr.person.source_row_id, [])
+        tours_list.append(tr)
+        riders_by_srid[tr.person.source_row_id] = tr.person
+    
+    # generate shift/roster data based on ordered list of TourRiders for each rider
+    rosters = []
+
+    for person_srid, tr_list in rider_tours.items():
+        # adapted algorithm from generate_pay_slots()
+
+        # add setup time
+        start_time = tr_list[0].tour.time_start - timedelta(minutes=setup_time_mins)
+        my_roster_slots = [{
+            'type': 'break',
+            'description': 'Setup time',
+            'time_start': json_datetime(start_time),
+            'time_end': json_datetime(tr_list[0].tour.time_start),
+        }]
+        my_roster_notes = [
+            '%s: Setup at WH' % format_time(start_time),
+        ]
+
+        end_time = tr_list[-1].tour.time_end
+
+        prev_tr = None
+        for tr in tr_list:
+            if prev_tr is not None:
+                my_roster_slots.append({
+                    'type': 'break',
+                    'description': 'Tour break',
+                    'time_start': json_datetime(prev_tr.tour.time_end),
+                    'time_end': json_datetime(tr.tour.time_start),
+                })
+                my_roster_notes.append(
+                    '%s: %d minute break' % (
+                        format_time(prev_tr.tour.time_end),
+                        (tr.tour.time_start - prev_tr.tour.time_end).total_seconds() // 60,
+                    )
+                )
+            my_roster_slots.append({
+                'type': 'tour',
+                'time_start': json_datetime(tr.tour.time_start),
+                'time_end': json_datetime(tr.tour.time_end),
+                'description': tr.tour.tour_type,
+                'tour_id': tr.tour_id,
+            })
+            my_roster_notes.append(
+                '%s: %s (%d minutes)' % (
+                    format_time(tr.tour.time_start),
+                    tr.tour.tour_type,
+                    (tr.tour.time_end - tr.tour.time_start).total_seconds() // 60,
+                )
+            )
+        my_roster_notes.append('%s: Finish' % format_time(end_time))
+
+        roster = Roster(
+            source = 'auto',
+            person = riders_by_srid[person_srid],
+            area = area,
+            time_start = start_time,
+            time_end = end_time,
+            tour_slots = my_roster_slots,
+            shift_notes = '\n'.join(my_roster_notes),
+        )        
 
 def save_tour_schedule(tours_date, schedule_data):
     # get the tours and sessions in a dict keyed by id

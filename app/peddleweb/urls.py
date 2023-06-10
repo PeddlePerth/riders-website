@@ -79,6 +79,7 @@ urlpatterns = [
     path('tours/update/', views.update_tours_data, name='update_tours'),
     path('tours/data/', views.tours_data_view, name='tour_sched_data'),
     path('tours/editarea/<tour_area_id>/<tours_date>/', views.schedule_editor_view, name='tour_sched_edit'),
+    path('tours/data/editor/', views.schedule_admin_data_view, name='tour_sched_admin_data'),
     path('tours/reports/week/<week_start>/', views.tour_pays_view, name='tour_pays'),
     path('tours/reports/data/', views.tour_pays_data_view, name='tour_pays_data'),
     path('tours/venues/week/<week_start>/', views.venues_report_view, name='venues_report'),

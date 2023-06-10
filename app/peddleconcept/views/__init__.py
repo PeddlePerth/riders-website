@@ -4,6 +4,7 @@ from .base import (
 
 from .tours_admin import (
     schedule_editor_view,
+    schedule_admin_data_view,
     schedules_dashboard_view,
     schedules_dashboard_data_view,
     update_tours_data,

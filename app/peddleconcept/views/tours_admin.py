@@ -13,7 +13,8 @@ from peddleconcept.util import (
 )
 from peddleconcept.tours.schedules import (
     get_autoscan_status, get_tour_summary, get_venues_report,
-    get_rider_unavailability
+    get_rider_unavailability, get_tour_schedule_data,
+    get_rider_time_off_json,
 )
 from peddleconcept.tours.rezdy import update_from_rezdy
 from peddleconcept.tours.fringe import update_from_fringe
@@ -41,7 +42,7 @@ def schedule_editor_view(request, tour_area_id=None, tours_date=None):
 
     jsvars = {
         'urls': {
-            'tour_sched_data': reverse('tour_sched_data'),
+            'tour_sched_data': reverse('tour_sched_admin_data'),
             'tours_for': reverse('tours_for', kwargs={
                 'tour_area_id': tour_area.id, 'tours_date': tours_date.isoformat()}),
         },
@@ -51,6 +52,36 @@ def schedule_editor_view(request, tour_area_id=None, tours_date=None):
         'tour_area_id': tour_area.id,
     }
     return render_base(request, 'schedules_editor', react=True, context=ctx, jsvars=jsvars)
+
+@user_passes_test(staff_required)
+@require_http_methods(['POST'])
+def schedule_admin_data_view(request):
+    """ Same data view for Tour Schedule Viewer, Rider Tour Schedule and Tour Schedule Editor """
+    reqdata = json.loads(request.body)
+    tours_date = from_json_date(reqdata.get('tours_date'))
+    action = reqdata.get('action')
+    tour_area_id = reqdata.get('tour_area_id')
+
+    try:
+        tour_area = Area.objects.get(active=True, id=tour_area_id)
+    except (ValueError, Area.DoesNotExist):
+        tour_area = None
+
+    if not tour_area or not tours_date:
+        return HttpResponseBadRequest('Invalid tour_area_id or tours_date')
+    
+    if 'tours' in reqdata:
+        save_tour_schedule(tours_date, reqdata['tours'])
+
+    if action == 'close':
+        return JsonResponse({}) # empty success response when closing editor
+
+    data = get_tour_schedule_data(tour_area, tours_date, in_editor=True)
+    
+    if action == 'open':
+        data['rider_time_off'] = get_rider_time_off_json(tours_date)
+
+    return JsonResponse(data)
 
 @user_passes_test(staff_required)
 def schedules_dashboard_view(request, tours_date=None):

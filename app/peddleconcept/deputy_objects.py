@@ -70,31 +70,72 @@ def parse_employee_json(data):
     person.active_deputy = data.get('Active') == True and data.get('Status') != 0 and data.get('AllowLogin') == True
     return person
 
-def parse_roster_json(data, people={}, areas={}):
-    """ Parse Roster JSON: https://developer.deputy.com/deputy-docs/docs/roster """
-    rest_break_total = 0
-    for slot in data.get('Slots', []):
-        if slot.get('strTypeName') == 'Meal Break':
-            continue
-        slot_time = slot.get('intEnd', 0) - slot.get('intStart', 0)
-        rest_break_total += max(slot_time, 0) // 60
+def parse_roster_json(data, employee_dict=None, area_dict=None, api_creator_id=None):
+    employee_id = str(data.get('Employee'))
+    ou_id = str(data.get('OperationalUnit'))
 
-    return Roster(
+    roster = Roster(
         source = 'deputy',
         source_row_state = 'live',
-        source_row_id = data.get('Id'),
+        source_row_id = str(data.get('Id')),
 
-        person = people.get(data.get('Employee')),
-        area = areas.get(data.get('OperationalUnit')),
+        person = employee_dict.get(employee_id) if employee_dict and employee_id else None,
+        area = area_dict.get(ou_id) if area_dict else None,
         time_start = parse_datetime(data.get('StartTime')),
         time_end = parse_datetime(data.get('EndTime')),
-        meal_break_mins = (parse_time_seconds(data.get('Mealbreak', 0)) // 60) or 0,
-        rest_break_mins = rest_break_total or 0,
         open_shift = data.get('Open') or False,
-        warning = data.get('Warning') or '',
-        warning_override = data.get('WarningOverrideComment') or '',
+        approval_required = data.get('ApprovalRequired') or False,
+        warning_comment = data.get('Warning') or '',
+        warning_override_comment = data.get('WarningOverrideComment') or '',
         published = data.get('Published') or False,
         shift_notes = data.get('Comment') or '',
-        shift_confirmed = data.get('ConfirmStatus') in (0, 2), # confirmation not required, or confirmed
-        updated = parse_datetime_str(data.get('Modified')),
+        confirm_status = data.get('ConfirmStatus'),
+        swap_status = data.get('SwapStatus'),
     )
+    # extra attributes not stored in the DB
+    roster.employee_id = employee_id
+    roster.operationalunit_id = ou_id
+    if isinstance(slots := data.get('Slots'), list):
+        for slot in sorted(slots, key=lambda s: s.get('intStart')):
+            if slot.get('blnEmptySlot') != False:
+                continue
+            roster.tour_slots.append({
+                "type": "break",
+                "time_start": slot.get('intUnixStart') * 1000, # store timestamps in Javascript format
+                "time_end": slot.get('intUnixEnd') * 1000,
+            })
+
+    if (creator := data.get('Creator')) and creator == api_creator_id:
+        roster._is_manual = False # created using the API account
+    else:
+        roster._is_manual = True # assume all other Roster objects are created manually
+    return roster
+
+def make_roster_json(roster):
+    data = {
+        'Id': roster.source_row_id if roster.source_row_id else None,
+        'Employee': roster.person.source_row_id if roster.person and roster.person.source_row_id else None,
+        'OperationalUnit': roster.area.source_row_id if roster.area and roster.area.source_row_id else None,
+        'StartTime': int(roster.time_start.timestamp()),
+        'EndTime': int(roster.time_end.timestamp()),
+        'Open': roster.open_shift,
+        'ApprovalRequired': roster.approval_required,
+        'Warning': roster.warning_comment,
+        'WarningOverrideComment': roster.warning_override_comment,
+        'Published': roster.published,
+        'Comment': roster.shift_notes,
+        'ConfirmStatus': roster.confirm_status,
+        'SwapStatus': roster.swap_status,
+        'Slots': [
+            {
+                "blnEmptySlot": False,
+                "strType": "B",
+                "intUnixStart": slot['time_start'] // 1000,
+                "intUnixEnd": slot['time_end'] // 1000,
+                "strTypeName": "Meal Break" if i == 0 else "Rest Break",
+            }
+            for i, slot in enumerate(roster.tour_slots)
+            if slot['type'] == 'break'
+        ],
+    }
+    return data

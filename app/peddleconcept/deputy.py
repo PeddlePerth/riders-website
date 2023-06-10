@@ -234,4 +234,125 @@ def sync_deputy_people(dry_run=False, disable_riders=False, no_add=True, match_o
     )
     return status_msg
 
+def sync_rosters(tours_date, area, tour_rosters_list, dry_run=False):
+    """
+    Shift swaps? Some rosters in Deputy may be changed remotely - if they match the key then 
+        we could update them locally.
+        - but this would also have to update the tour riders, in theory, so we don't do that
+        - for now, it's enough to just push the updates and overwrite everything in Deputy
+    Also nobody is using them!
+
+    Since the tour schedule shifts are not associated in any way with actual Roster instances or Deputy Ids,
+        they have to be matched each time based on the start/end times and break slots if we want to 'update' them
+        (as opposed to delete all & create new each time).
     
+    Some rosters may not upload properly to Deputy, eg. if there are scheduling conflicts. So we keep local
+    Roster instances with the requested tour slot data (for the Tour Schedule Editor to review) but with
+    null source row IDs indicating lack of corresponding Deputy rosters.
+
+    Returns a list of Roster instances for Deputy (or are in deputy if dry_run=False) + list of changelogs
+    """
+
+    people_by_srid = {
+        p.source_row_id for p in Person.objects.filter(source_row_state='live')
+        if p.source_row_id
+    }
+
+    api = DeputyAPI()
+    try:
+        dpt_rosters = api.query_rosters(tours_date, tours_date, area, people=people_by_srid)
+    except Exception as e:
+        logger.error('Deputy query_rosters error: %s: %s' % (type(e).__name__, str(e)))
+        return
+    
+    # Live Rosters in Deputy
+    dpt_rosters_by_key = {} # match with tour schedule shifts
+    dpt_rosters_manual = [] # rosters not created automatically in Deputy will not be affected by the sync
+    for roster in dpt_rosters:
+        key = roster.cmp_key()
+        if dpt_rosters_by_key._is_manual:
+            dpt_rosters_manual.append(roster)
+            continue
+
+        dpt_rosters_by_key[roster.cmp_key()] = roster
+        
+        if roster.person_id and roster.person_id in key_rosters:
+            logger.warning("Got duplicated deputy roster for person %s on date %s" % (
+                roster.person.name, roster.time_start.date().isoformat(),
+            ))
+        elif roster.person_id is None:
+            if roster.employee_id:
+                logger.warning("Missing local record for Person with Deputy Employee Id %s" % roster.employee_id)
+        
+    # Rosters calculated from tour schedule (source of truth for all roster data)
+    tour_rosters_by_key = {
+        roster.cmp_key(): roster
+        for roster in tour_rosters_list
+    }
+    
+    # match the Deputy Rosters with Tour schedule ones by key
+    dpt_rosters_set = set(dpt_rosters_by_key.keys())
+    tour_rosters_set = set(tour_rosters_by_key.keys())
+
+    rosters_matching = dpt_rosters_set & tour_rosters_set # update these if they have changed somehow
+    dpt_rosters_extra = dpt_rosters_set - rosters_matching # delete extraneous rosters in Deputy
+    tour_rosters_extra = tour_rosters_set - rosters_matching # add missing rosters to Deputy
+
+    # create changelogs for the deputy rosters - pretend they are in the DB for the sake of generating changes
+    changelogs = []
+    num_deleted = len(dpt_rosters_extra)
+    num_added = len(tour_rosters_extra)
+    num_updated = num_unchanged = 0
+    
+    for key in rosters_matching:
+        # update the tour roster from the deputy one so the full tour slots are retained
+        roster = tour_rosters_by_key[key]
+        dpt_roster = dpt_rosters_by_key[key]
+        roster.source_row_id = dpt_roster.source_row_id
+
+        if (chglog := roster.update_from_instance(dpt_roster)):
+            num_updated += 1
+            changelogs.append(chglog)
+        else:
+            num_unchanged += 1
+
+    logger.info('Match and compare Tour Rosters with Deputy: %d to add, %d to delete, %d to update, %d unchanged' % (
+        num_added, num_deleted, num_updated, num_unchanged, len(changelogs),
+    ))
+
+    for key in dpt_rosters_extra:
+        if (chglog := dpt_rosters_by_key[key].mark_source_deleted()):
+            changelogs.append(chglog)
+            num_deleted += 1
+
+    if not dry_run:
+        num_add_ok, num_add_fail = 0
+        num_update_ok, num_update_fail = 0
+        logger.info('Updating rosters in Deputy for date %s, area %s' % (tours_date.isoformat(), area.name))
+        try:
+            rosters_added = api.add_rosters([
+                tour_rosters_by_key[key] for key in tour_rosters_extra
+            ])
+            for r in rosters_added:
+                if r.source_row_id:
+                    num_add_ok += 1
+                    if (chglog := tour_rosters_by_key[key].mark_source_added()):
+                        changelogs.append(chglog)
+                        num_added += 1
+                else:
+                    logger.debug('add_rosters failed for Roster: %s' % r.cmp_key())
+                    tour_rosters_by_key[r.cmp_key()].source_row_state = 'error'
+                    num_add_fail += 1
+            
+            updated_ids, update_error_ids = api.update_rosters([
+                tour_rosters_by_key[key] for key in rosters_matching
+            ])
+            for r in update_error_ids:
+                logger.debug('update_rosters failed for Roster: %s' % r.cmp_key())
+                tour_rosters_by_key[key].source_row_state = 'error'
+            num_update_ok = len(updated_ids)
+            num_update_fail = len(update_error_ids)
+
+            
+
+

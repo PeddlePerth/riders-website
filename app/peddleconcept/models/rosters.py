@@ -11,12 +11,12 @@ class Roster(MutableDataRecord):
     Corresponds 1:1 with Deputy Roster.
     """
     MUTABLE_FIELDS = (
-        'person', 'area', 'time_start', 'time_end', 'meal_break_mins', 'rest_break_mins',
-        'open_shift', 'warning', 'warning_override', 'published', 'shift_notes', 'shift_confirmed'
+        'person', 'area', 'time_start', 'time_end', 'open_shift', 'approval_required',
+        'warning_comment', 'warning_override_comment', 'published', 'shift_notes', 'confirm_status', 'swap_status',
     )
 
     person = models.ForeignKey('Person', on_delete=models.SET_NULL, null=True, blank=True,
-        help_text='Person rostered to this shift - may be blank for Open or Empty shift.')
+        help_text='Person rostered to this shift - may be blank for Open shift.')
 
     # corresponds to Area in Deputy UI where shift is published
     area = models.ForeignKey('Area', on_delete=models.SET_NULL, null=True)
@@ -27,27 +27,26 @@ class Roster(MutableDataRecord):
     # affects the Roster and if something should be done about it.
     time_start = models.DateTimeField(default=timezone.now)
     time_end = models.DateTimeField(default=timezone.now)
-    meal_break_mins = models.PositiveIntegerField(blank=True, default=0)
-    rest_break_mins = models.PositiveIntegerField(blank=True, default=0)
     open_shift = models.BooleanField(blank=True, default=False)
-    warning = models.TextField(blank=True, help_text='Warning message from Deputy if chosen person is not preferred')
-    warning_override = models.TextField(blank=True, help_text='Comment in Deputy if/why warning is ignored')
+    approval_required = models.BooleanField(blank=True, default=False)
+    warning_comment = models.TextField(blank=True)
+    warning_override_comment = models.TextField(blank=True)
     published = models.BooleanField(blank=True, default=False, verbose_name='Publish in Deputy')
-    shift_notes = models.TextField(blank=True, default=True)
-    shift_confirmed = models.BooleanField(blank=True, default=True)
-    timesheet_locked = models.DateTimeField(null=True, blank=True,
-        help_text='Date/Time when timesheet was created for this shift')
+    shift_notes = models.TextField(blank=True)
+    confirm_status = models.PositiveIntegerField(null=True, blank=True)
+    swap_status = models.PositiveIntegerField(null=True, blank=True)
 
-class RosterTour(models.Model):
-    """ intermediate entity providing a list of (non-overlapping) tours for each roster """
+    tour_slots = models.JSONField(default=list)
 
-    RIDER_ROLE_CHOICES = [
-        (x, x) for x in ['tour-lead', 'tour-colead', 'rider']
-    ]
-    roster = models.ForeignKey(Roster, on_delete=models.CASCADE)
-    tour = models.ForeignKey('Tour', on_delete=models.CASCADE)
-    rider_role = models.CharField(max_length=20, blank=True, choices=RIDER_ROLE_CHOICES)
-
-    # numeric order of tour in the schedule, ie. first tour is 1, then 2, ...
-    # can be used for some consistency checking, in case tour is rescheduled?
-    tour_order = models.PositiveIntegerField(blank=True, default=0)
+    def cmp_key(self):
+        """ return a hashable string value representing the roster for easy comparison with other rosters """
+        return "%s_%d_%d_%s" % (
+            self.person.source_row_id if self.person else '',
+            self.time_start.timestamp(),
+            self.time_end.timestamp(),
+            ",".join((
+                "%d_%d" % (slot['time_start'] // 1000, slot['time_end'] // 1000)
+                for slot in self.tour_slots if slot['type'] == 'break'
+            )) if isinstance(self.tour_slots, list) else '',
+        )
+        

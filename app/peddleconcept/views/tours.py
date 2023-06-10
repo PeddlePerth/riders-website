@@ -98,32 +98,15 @@ def rider_tours_data_view(request):
 @require_person_or_user()
 @require_http_methods(['POST'])
 def tours_data_view(request):
-    """ Same data view for Tour Schedule Viewer, Rider Tour Schedule and Tour Schedule Editor """
+    """ Data view for TourScheduleViewer """
     reqdata = json.loads(request.body)
     if not 'tours_date' in reqdata or not 'tour_area_id' in reqdata:
         return HttpResponseBadRequest('Missing tour_area_id or tours_date')
     tours_date = from_json_date(reqdata['tours_date'])
-    action = reqdata.get('action')
-
     try:
         tour_area = Area.objects.get(active=True, id=reqdata['tour_area_id'])
     except (ValueError, Area.DoesNotExist):
         return HttpResponseBadRequest('Invalid tour_area_id')
     
-    if 'tours' in reqdata:
-        if request.user.is_staff:
-            save_tour_schedule(tours_date, reqdata)
-        else:
-            return HttpResponseBadRequest()
-
-    in_editor = reqdata.get('in_editor', False) and request.user.is_staff
-    if in_editor and action == 'close':
-        return JsonResponse({}) # empty success response when closing editor
-
-    data = get_tour_schedule_data(tour_area, tours_date, in_editor=in_editor)
-    
-    if in_editor and action == 'open':
-        data['rider_time_off'] = get_rider_time_off_json(tours_date)
-
-    return JsonResponse(data)
+    return JsonResponse(get_tour_schedule_data(tour_area, tours_date, in_editor=False))
 
