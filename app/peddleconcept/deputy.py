@@ -234,7 +234,7 @@ def sync_deputy_people(dry_run=False, disable_riders=False, no_add=True, match_o
     )
     return status_msg
 
-def sync_rosters(tours_date, area, tour_rosters_list, dry_run=False):
+def sync_deputy_rosters(tours_date, area, tour_rosters_list, dry_run=False):
     """
     Shift swaps? Some rosters in Deputy may be changed remotely - if they match the key then 
         we could update them locally.
@@ -298,61 +298,113 @@ def sync_rosters(tours_date, area, tour_rosters_list, dry_run=False):
     dpt_rosters_extra = dpt_rosters_set - rosters_matching # delete extraneous rosters in Deputy
     tour_rosters_extra = tour_rosters_set - rosters_matching # add missing rosters to Deputy
 
+    logger.info('Match and compare Tour Rosters with Deputy: %d to add, %d matching, %d to delete' % (
+        len(tour_rosters_extra), len(rosters_matching), len(dpt_rosters_extra),
+    ))
+
+    results = [] # keep track of all the rosters we either tried to add, remove or delete
+    results_errors = [] # and any rosters where add/update/delete failed
+
     # create changelogs for the deputy rosters - pretend they are in the DB for the sake of generating changes
     changelogs = []
-    num_deleted = len(dpt_rosters_extra)
-    num_added = len(tour_rosters_extra)
-    num_updated = num_unchanged = 0
+
+    num_add_ok = num_add_fail = 0
+    num_unchanged = num_update_ok = num_update_fail = 0
+    num_delete_ok = num_delete_fail = 0
+    logger.info('%sUpdating rosters in Deputy for date %s, area %s' % (
+        'DRY RUN: ' if dry_run else '', tours_date.isoformat(), area.name,
+    ))
+    # Add rosters to Deputy & record changelogs for successful items
+    rosters_added = [ tour_rosters_by_key[key] for key in tour_rosters_extra ]
+    if not dry_run:
+        try:
+            rosters_added = api.add_rosters(rosters_added)
+        except Exception as e:
+            logger.error('add_rosters error %s: %s'  % (type(e).__name__, str(e)))
     
+    for r in rosters_added:
+        key = r.cmp_key()
+        if r.source_row_id or dry_run:
+            num_add_ok += 1
+            if (chglog := tour_rosters_by_key[key].mark_source_added()):
+                changelogs.append(chglog)
+            results.append(r)
+        else:
+            r.source_row_state = 'add_error'
+            logger.debug('add_rosters failed for Roster: %s' % key)
+            num_add_fail += 1
+            results_errors.append(r)
+    
+    # Update rosters with changes & record changelogs
+    rosters_to_update = {}
     for key in rosters_matching:
         # update the tour roster from the deputy one so the full tour slots are retained
         roster = tour_rosters_by_key[key]
         dpt_roster = dpt_rosters_by_key[key]
-        roster.source_row_id = dpt_roster.source_row_id
+        roster.source_row_id = dpt_roster.source_row_id # make sure Deputy ID is preserved
 
         if (chglog := roster.update_from_instance(dpt_roster)):
-            num_updated += 1
+            roster.source_row_state = 'changed' 
             changelogs.append(chglog)
+            rosters_to_update[roster.source_row_id] = roster
         else:
+            roster.source_row_state = 'unchanged' # record change status with source_row_state for the Roster viewer
             num_unchanged += 1
-
-    logger.info('Match and compare Tour Rosters with Deputy: %d to add, %d to delete, %d to update, %d unchanged' % (
-        num_added, num_deleted, num_updated, num_unchanged, len(changelogs),
-    ))
-
-    for key in dpt_rosters_extra:
-        if (chglog := dpt_rosters_by_key[key].mark_source_deleted()):
-            changelogs.append(chglog)
-            num_deleted += 1
-
+            results.append(r)
+    
     if not dry_run:
-        num_add_ok, num_add_fail = 0
-        num_update_ok, num_update_fail = 0
-        logger.info('Updating rosters in Deputy for date %s, area %s' % (tours_date.isoformat(), area.name))
         try:
-            rosters_added = api.add_rosters([
-                tour_rosters_by_key[key] for key in tour_rosters_extra
-            ])
-            for r in rosters_added:
-                if r.source_row_id:
-                    num_add_ok += 1
-                    if (chglog := tour_rosters_by_key[key].mark_source_added()):
-                        changelogs.append(chglog)
-                        num_added += 1
-                else:
-                    logger.debug('add_rosters failed for Roster: %s' % r.cmp_key())
-                    tour_rosters_by_key[r.cmp_key()].source_row_state = 'error'
-                    num_add_fail += 1
-            
-            updated_ids, update_error_ids = api.update_rosters([
-                tour_rosters_by_key[key] for key in rosters_matching
-            ])
-            for r in update_error_ids:
-                logger.debug('update_rosters failed for Roster: %s' % r.cmp_key())
-                tour_rosters_by_key[key].source_row_state = 'error'
-            num_update_ok = len(updated_ids)
-            num_update_fail = len(update_error_ids)
+            updated_ids, update_error_ids = api.update_rosters(rosters_to_update)
+        except Exception as e:
+            logger.error('update_rosters error %s: %s' % (type(e).__name__, str(e)))
+            updated_ids = []
+            update_error_ids = rosters_to_update.keys()
 
-            
+        for srid in updated_ids:
+            r = rosters_to_update[srid] 
+            results.append(rosters_to_update[srid])
+        for srid in update_error_ids:
+            r = rosters_to_update[srid]
+            logger.debug('update_rosters failed for Deputy Roster with ID: %s' % srid)
+            r.source_row_state = 'update_error'
+            results_errors.append(r)
+
+        num_update_ok = len(updated_ids)
+        num_update_fail = len(update_error_ids)
+    else:
+        num_update_ok = len(rosters_to_update)
+        num_update_fail = 0
+    
+    rosters_to_delete = {
+        dpt_rosters_by_key[key].source_row_id: dpt_rosters_by_key[key]
+        for key in dpt_rosters_extra
+    }
+    if not dry_run:
+        try:
+            deleted_ids = api.delete_rosters(ids_to_delete)
+        except Exception as e:
+            deleted_ids = []
+            logger.error('delete_rosters error %s: %s' % (type(e).__name__, str(e)))
+    else:
+        deleted_ids = ids_to_delete
+
+    # delete non-matching rosters
+    for srid, roster in rosters_to_delete.items():
+        if srid in deleted_ids:
+            if (chglog := roster.mark_source_deleted()):
+                changelogs.append(chglog)
+            num_delete_ok += 1
+            results.append(roster)
+        else:
+            num_delete_fail += 1
+            results_errors.append(roster)
+
+    logger.info('%sSync Deputy rosters: added %d (%d failed), updated %d (%d unchanged, %d failed), deleted %d (%d failed), %d changelogs' % (
+        'DRY_RUN: ' if dry_run else '', num_add_ok, num_add_fail, num_update_ok, num_unchanged, num_update_fail, num_delete_ok, num_delete_fail, len(changelogs),
+    ))
+    if not dry_run:
+        ChangeLog.bulk_create(changelogs)
+
+    return results, results_errors
 
 

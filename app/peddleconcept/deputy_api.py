@@ -303,6 +303,8 @@ class DeputyAPI:
         resp = self.post('api/v1/resource/Roster/BULK', [
             make_roster_json(roster) for roster in roster_list
         ])
+        if not isinstance(resp, dict):
+            return [], []
 
         res = resp.get('results')
         errors = resp.get('errors')
@@ -328,3 +330,10 @@ class DeputyAPI:
         resp = self.post('api/v1/supervise/roster/discard', {
             'intRosterArray': roster_ids,
         })
+
+        if not isinstance(resp, list):
+            return []
+        else:
+            return [
+                item.get('Id') for item in resp
+            ]
