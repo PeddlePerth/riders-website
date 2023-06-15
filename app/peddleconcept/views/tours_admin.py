@@ -73,14 +73,24 @@ def schedule_admin_data_view(request):
     if 'tours' in reqdata:
         save_tour_schedule(tours_date, reqdata['tours'])
 
-    if action == 'close':
-        return JsonResponse({}) # empty success response when closing editor
-
-    data = get_tour_schedule_data(tour_area, tours_date, in_editor=True)
-    
+    data = {}
     if action == 'open':
         data['rider_time_off'] = get_rider_time_off_json(tours_date)
-
+    
+    if action == 'close':
+        pass # empty success response on editor save & close
+    elif action in ['get_rosters', 'save_rosters']:
+        rosters_list = get_tour_rosters(tours_date, tour_area)
+        rosters, rosterErrors = sync_deputy_rosters(tours_date, tour_area, dry_run=('save' not in action))
+        
+        data.update({
+            'rosters': [r.to_json() for r in rosters],
+            'rosterErrors': [r.to_json() for r in rosterErrors],
+            'tourArea': tourArea.to_json(),
+        })
+    else:
+        data.update(get_tour_schedule_data(tour_area, tours_date, in_editor=True))
+    
     return JsonResponse(data)
 
 @user_passes_test(staff_required)

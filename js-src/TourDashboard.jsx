@@ -141,48 +141,55 @@ function WeeklyTourSummary({ summaryData, weekStart, tourAreas }) {
         <Row className="Header" key={0}>
             {weekData ? weekData.map((day, i) => 
                  day == null ? null : <Col key={i}>
-                    <span className="fs-5 fw-bold me-2">{format_short_date(day.date)}</span>&nbsp;
-                    <span>Fetched {format_timedelta((new Date().valueOf()) - weekData[i].updated)} ago</span>
-
-                    { Object.entries(day.area_tours).map(([area_id, todaysTours]) => (
-                        <div className="d-inline-block m-1 p-1 rounded-1" key={area_id} style={{ backgroundColor: tourAreas[area_id].colour }}>
-                            <Badge pill bg="light" text="dark" className="d-block mb-1">{ tourAreas[area_id].display_name }</Badge>
-                        <ButtonGroup size="sm">
-                            <Button variant="light"
-                                href={todaysTours.viewUrl} key={1}>View
-                                </Button>
-                            <Button variant="secondary" href={todaysTours.editUrl} key={2}>
-                                Edit
-                            </Button>
-                        </ButtonGroup>
-                        </div>
-                    )) }
+                    
                 </Col>
                 ) : null}
         </Row>
         <Row key={1}>
         {weekData ? weekData.map((day, di) =>
+            day == null ? null : // day column: header + list of tours
             <Col className="TourSummaryDay" key={di}>
-                {day == null ? null : 
+                <div className="Header mb-1">
+                <span className="fs-5 fw-bold me-2">{format_short_date(day.date)}</span>&nbsp;
+                <span>Fetched {format_timedelta((new Date().valueOf()) - weekData[di].updated)} ago</span>
+
+                { Object.entries(day.area_tours).map(([area_id, todaysTours]) => (
+                    <div className="d-inline-block m-1 p-1 rounded-1" key={area_id} style={{ backgroundColor: tourAreas[area_id].colour }}>
+                        <Badge pill bg="light" text="dark" className="d-block mb-1">{ tourAreas[area_id].display_name }</Badge>
+                    <ButtonGroup size="sm">
+                        <Button variant="light"
+                            href={todaysTours.viewUrl} key={1}>View
+                            </Button>
+                        <Button variant="secondary" href={todaysTours.editUrl} key={2}>
+                            Edit
+                        </Button>
+                    </ButtonGroup>
+                    </div>
+                )) }
+                </div>
+                { // tours list per day
                 Object.entries(day.area_tours)
                     .sort(areaSort(tourAreas))
                     .map(([area_id, areaTours]) => areaTours.map((tour, ti) => 
                 <div className="TourSummaryTour" key={ti}>
-                    <div className="Type text-white" style={{ backgroundColor: tourAreas[area_id].colour}}>
-                        { tour.tour_type }&nbsp;{ (groupTours && tour.num > 1) ? (
-                        <Badge pill bg="info">{tour.num} bookings</Badge>) : null }
+                    <div className="fw-bold">
+                        { tour.tour_type }&nbsp;{ (groupTours && tour.num > 1) ? ' (x' + tour.num + ')' : null }
+                        <Badge pill bg="none" style={{ backgroundColor: tourAreas[area_id].colour }}>{ tourAreas[area_id].display_name }</Badge>
                     </div>
                     <div className="Time">{ format_time_12h(tour.time_start) + '—' + format_time_12h(tour.time_end) }</div>
                     { groupTours ? null : <div className="Qty">{ tour.quantity }</div> }
                     <div className="Info">
-                        { tour.num_riders < tour.num_bikes ? 
-                            <Badge pill bg="danger" key={1}>{plural(tour.num_bikes - tour.num_riders, ' RIDER', ' RIDERS') + ' NEEDED'}</Badge> :
-                            <Badge pill bg="success" key={1}>{plural(tour.num_riders, ' RIDER', ' RIDERS')}</Badge> }
                         { tour.cancelled ?
-                            <Badge pill bg="secondary" className="mx-1" key={2}>{ groupTours && tour.num > 1 ? plural(tour.cancelled, ' cancellation', ' cancellations') : 'CANCELLED' }</Badge> : null }
+                            <Badge pill bg="secondary" className="mx-1" key={2}>
+                                { groupTours && tour.num > 1 ? plural(tour.cancelled, ' cancellation', ' cancellations') : 'CANCELLED' }
+                            </Badge> : (
+                                tour.num_riders < tour.num_bikes ? 
+                                <Badge pill bg="danger" key={1}>{plural(tour.num_bikes - tour.num_riders, ' RIDER', ' RIDERS') + ' NEEDED'}</Badge> :
+                                <Badge pill bg="success" key={1}>{plural(tour.num_riders, ' RIDER', ' RIDERS')}</Badge>
+                            ) }
                     </div>
-                </div>)
-                )}
+                </div> ))
+                }
             </Col>) : 'Loading...'}
         </Row>
     </div>;

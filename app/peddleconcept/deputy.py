@@ -234,6 +234,12 @@ def sync_deputy_people(dry_run=False, disable_riders=False, no_add=True, match_o
     )
     return status_msg
 
+def sort_rosters(rosters_list):
+    return sorted(
+        sorted(rosters_list, key=lambda r: (r.person.name if r.person else '')),
+        key=lambda r: r.time_start
+    )
+
 def sync_deputy_rosters(tours_date, area, tour_rosters_list, dry_run=False):
     """
     Shift swaps? Some rosters in Deputy may be changed remotely - if they match the key then 
@@ -352,7 +358,7 @@ def sync_deputy_rosters(tours_date, area, tour_rosters_list, dry_run=False):
             num_unchanged += 1
             results.append(r)
     
-    if not dry_run:
+    if not dry_run and rosters_to_update:
         try:
             updated_ids, update_error_ids = api.update_rosters(rosters_to_update)
         except Exception as e:
@@ -374,12 +380,14 @@ def sync_deputy_rosters(tours_date, area, tour_rosters_list, dry_run=False):
     else:
         num_update_ok = len(rosters_to_update)
         num_update_fail = 0
+        for roster in rosters_to_update.values():
+            results.append(roster)
     
     rosters_to_delete = {
         dpt_rosters_by_key[key].source_row_id: dpt_rosters_by_key[key]
         for key in dpt_rosters_extra
     }
-    if not dry_run:
+    if not dry_run and ids_to_delete:
         try:
             deleted_ids = api.delete_rosters(ids_to_delete)
         except Exception as e:
@@ -405,6 +413,6 @@ def sync_deputy_rosters(tours_date, area, tour_rosters_list, dry_run=False):
     if not dry_run:
         ChangeLog.bulk_create(changelogs)
 
-    return results, results_errors
+    return sort_rosters(results), sort_rosters(results_errors)
 
 

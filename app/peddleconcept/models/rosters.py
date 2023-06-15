@@ -49,4 +49,18 @@ class Roster(MutableDataRecord):
                 for slot in self.tour_slots if slot['type'] == 'break'
             )) if isinstance(self.tour_slots, list) else '',
         )
+
+    def to_json(self):
+        return {
+            'cmp_key': self.cmp_key(),
+            'rider_name': self.person.name if self.person else None,
+            'time_start': json_datetime(self.time_start),
+            'time_end': json_datetime(self.time_end),
+            'open_shift': self.open_shift,
+            'approval_required': self.approval_required,
+            'warning_comment': self.warning_comment,
+            'warning_override_comment': self.warning_override_comment,
+            'published': self.published,
+            'shift_notes': self.shift_notes,
+        }
         

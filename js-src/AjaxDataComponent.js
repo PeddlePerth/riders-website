@@ -56,7 +56,7 @@ class AjaxDataComponent extends Component {
     onDataLoaded(ok, response) {
         //console.log("got data:", ok, response);
         if (!ok) {
-            this.setState({ errorMsg: response });
+            this.setState({ errorMsg: response || 'error requesting data'});
             return;
         } else {
             this.setState({ errorMsg: null, lastSave: new Date() });
@@ -123,8 +123,9 @@ class AjaxDataComponent extends Component {
                     ajaxToolbar: toolbarItems,
                     saveStatus: saveStatus,
                     isSaved: this.isSaved(),
+                    isLoaded: this.isLoaded(),
                     errorMsg: this.state.errorMsg,
-                }) : <div className="text-center p-2"><Spinner animation="border"/></div>,
+                }) : (this.state.errorMsg ? null : <div className="text-center p-2"><Spinner animation="border"/></div>),
         );
     }
 }

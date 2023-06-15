@@ -4,34 +4,60 @@ import { RiderTourSchedule } from "./RiderTourSchedule";
 import TourDashboard from "./TourDashboard";
 import { TourScheduleViewer } from "./TourScheduleViewer";
 import { VenuesReport } from "./VenuesReport";
+import { TourRosterViewer } from "./TourRosterAdmin";
 
 const $ = require('jquery');
 const ReactDOM = require('react-dom');
-const { createElement } = require('react');
+const { createElement, useState } = require('react');
 const TourScheduleEditor = require('./TourScheduleEditor.js');
 const AjaxDataComponent = require('./AjaxDataComponent.js');
 const TourPayReport = require('./TourPayReport.js');
 const { parse_datetime, post_data } = require('./utils');
 
-function load_schedule_editor() {
-    const container = document.getElementById("schedule-content");
-    const extraPostData = {
-        tours_date: window.jsvars.tours_date,
-        tour_area_id: window.jsvars.tour_area_id,
-        in_editor: true,
-    };
+// for tour schedule editor and rosters approval view
+function ScheduleAdminApp({ initialPage }) {
+    const [page, setPage] = useState(initialPage);
 
-    ReactDOM.render(
-        <AjaxDataComponent
+    if (page == 'schedules_editor') {
+        return <AjaxDataComponent
             ref={ el => window.scheduleEditor = el }
             dataConsumer={TourScheduleEditor}
-            extraPostData={extraPostData}
+            extraPostData={{
+                tours_date: window.jsvars.tours_date,
+                tour_area_id: window.jsvars.tour_area_id,
+                in_editor: true,
+            }}
             postUrl={window.jsvars.urls.tour_sched_data}
             dataRef={ (data) => window.tourData = data }
             getPostData={ ({ tours, sessions }) => ({
                 tours, sessions
             })}
-        />,
+            dataConsumerProps={{
+                setPage,
+            }}
+        />;
+    } else if (page == 'rosters_view') {
+        return <AjaxDataComponent
+            dataConsumer={TourRosterViewer}
+            dataConsumerProps={{
+                setPage,
+            }}
+            extraPostData={{
+                tours_date: window.jsvars.tours_date,
+                tour_area_id: window.jsvars.tour_area_id,
+                in_editor: true,
+            }}
+            postUrl={window.jsvars.urls.tour_sched_data}
+            // getPostData={ }
+        />;
+    }
+}
+
+function load_schedule_editor(page) {
+    const container = document.getElementById("schedule-content");
+
+    ReactDOM.render(
+        <ScheduleAdminApp initialPage={page}/>,
         container
     );
 }
@@ -130,7 +156,8 @@ $(function () {
 
     switch(window.page_name) {
         case 'schedules_editor':
-            load_schedule_editor();
+        case 'rosters_view':
+            load_schedule_editor(window.page_name);
             break;
         case 'report_tours':
             load_tour_pay_report();

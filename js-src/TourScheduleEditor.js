@@ -152,7 +152,7 @@ class TourScheduleEditor extends React.Component {
                 riderTimesUnavail[rider_id].lock_timespan(avl_start, avl_end); 
                 
                 // check for locked times when on tours
-                if (riderTimes[rider_id].is_locked_during(avl_start, avl_end)) {
+                if (!(ts.start > last_session_end || ts.end < first_session_start) && riderTimes[rider_id].is_locked_during(avl_start, avl_end)) {
                     // rider unavailable during some scheduled tour
                     let c = conflictRiders[rider_id] = (conflictRiders[rider_id] || []);
                     c.push(`unavailable from ${format_time_12h(ts.start)} to ${format_time_12h(ts.end)}`);
@@ -283,7 +283,7 @@ class TourScheduleEditor extends React.Component {
         return <div className="mx-3">
             <Row className="justify-content-center">
             { this.state.availability ? <Col xs={12} xl={2}>
-            <div className="position-sticky overflow-scroll" style={{top: '0', height: '100vh'}}>
+            <div className="position-sticky overflow-scroll" style={{top: '0', maxHeight: '100vh'}}>
                 { Object.keys(this.state.conflictRiders).length > 0 ? <>
                     <div className="fs-5 fw-bold mb-1 text-danger">Rider Conflicts</div>
                     { Object.entries(this.state.conflictRiders).map(([rider_id, conflicts], i) =>
@@ -324,11 +324,24 @@ class TourScheduleEditor extends React.Component {
                             ...this.props, // ignore empty POST data response and re-use already loaded data
                         };
                     })}>
-                        Save &amp; Return to Schedule
+                        Save &amp; View Schedule
                     </Button>
+                    <Button key={4} variant="primary" className="me-1" onClick={() => this.props.onSave('get_rosters', (ok, response => {
+                        if (ok) {
+                            this.props.setPage('rosters_view');
+                            return {
+                                ...this.props,
+                                ...response,
+                            };
+                        } else {
+                            return {
+                                ...this.props, // keep existing data in case of error
+                            };
+                        }
+                    }))}><i className="bi-phone-vibrate-fill me-1"/>Save &amp; View Rosters</Button>
                     <Button key={1} variant={ this.props.isSaved ? 'secondary' : 'success' } className="me-1"
                         onClick={() => this.props.onSave('save', (ok, response) => {
-                            if (ok) {
+                            if (ok) { // save response won't update Deputy unavailability, keep the previously loaded data
                                 return {
                                     ...response,
                                     rider_time_off: this.props.rider_time_off,
@@ -411,5 +424,36 @@ class TourScheduleEditor extends React.Component {
         </Row></div>;
     }
 }
+
+// make an intermediate component for unpacking ajax tour data props correctly
+const TourScheduleEditorAjax = ({ ajaxResponse, staticData, onAction, onSave, onEdit, saveStatus, isSaved, isLoaded, errorMsg, setPage }) => {
+    let data = ajaxResponse != null ? {...ajaxResponse} : {};
+    if (staticData) {
+        for (var [key, val] in Object.entries(staticData)) {
+            ajax[key] = val;
+        }
+    }
+    if (isLoaded && ajaxResponse) {
+        return <TourScheduleEditor
+            onAction={onAction}
+            onSave={onSave}
+            onEdit={onEdit}
+            saveStatus={saveStatus}
+            isSaved={isSaved}
+            isLoaded={isLoaded}
+            errorMsg={errorMsg}
+            tours={data.tours}
+            riders={data.riders}
+            venues={data.venues}
+            venue_presets={data.venue_presets}
+            bike_types={data.bike_types}
+            tours_date_formatted={data.tours_date_formatted}
+            setPage={setPage}
+        />;
+    }
+    return null;
+}
+
+
 
 module.exports = TourScheduleEditor;
