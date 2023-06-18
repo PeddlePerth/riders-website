@@ -7,7 +7,8 @@ from peddleconcept.settings import get_deputy_api_setting, DEPUTY_API_SETTING
 from peddleconcept.models import Person, Area
 from peddleconcept.util import log_response
 from django.contrib import messages
-from datetime import datetime
+from django.utils.timezone import get_default_timezone
+from datetime import datetime, time
 
 from peddleconcept.deputy_objects import *
 
@@ -23,7 +24,7 @@ class DeputyAPI:
         self.endpoint = deputy_conf.get('deputy_endpoint_url')
         self.creator_id = deputy_conf.get('api_creator_id')
         self.default_company_id = deputy_conf.get('company_id')
-        self.default_employee_role_id = deputy_conf.get('employee_id')
+        self.default_employee_role_id = deputy_conf.get('employee_role_id')
 
         if not self.token:
             logger.error('Deputy API cannot be used without endpoint and auth token: make sure %s is configured in Settings' % 
@@ -232,7 +233,7 @@ class DeputyAPI:
         
         return employee_time_off
 
-    def query_rosters(self, start_date, end_date, area, people=None):
+    def query_rosters(self, start_date, end_date, area, people_by_srid=None):
         dt_start = datetime.combine(start_date, time(0, 0, 0), tzinfo=get_default_timezone())
         dt_end = datetime.combine(end_date, time(23, 59, 59), tzinfo=get_default_timezone())
         resp = self.post('api/v1/resource/Roster/QUERY', {
@@ -242,12 +243,6 @@ class DeputyAPI:
                 "s3": {"field": "OperationalUnit", "type": "eq", "data": area.source_row_id },
             }
         })
-        if people:
-            people_by_srid = {
-                p.source_row_id: p for p in people if p.source_row_id
-            }
-        else:
-            people_by_srid = None
         
         return [
             parse_roster_json(item, employee_dict=people_by_srid, area_dict={area.id: area}, api_creator_id=self.creator_id)

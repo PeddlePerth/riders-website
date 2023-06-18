@@ -14,15 +14,36 @@ from peddleconcept.util import (
 from peddleconcept.tours.schedules import (
     get_autoscan_status, get_tour_summary, get_venues_report,
     get_rider_unavailability, get_tour_schedule_data,
-    get_rider_time_off_json,
+    get_rider_time_off_json, save_tour_schedule, get_tour_rosters,
 )
 from peddleconcept.tours.rezdy import update_from_rezdy
 from peddleconcept.tours.fringe import update_from_fringe
 from peddleconcept.models import Area
+from peddleconcept.deputy import sync_deputy_rosters
 
 from .base import render_base
 from .decorators import staff_required
 from .tours import get_schedule_or_redirect
+
+def get_tour_admin_jsvars(request, tour_area, tours_date):
+    return {
+        'urls': {
+            'tour_sched_data': reverse('tour_sched_admin_data'),
+            'tours_for': reverse('tours_for', kwargs={
+                'tour_area_id': tour_area.id, 'tours_date': tours_date.isoformat()
+            }),
+            'schedules_editor': reverse('tour_sched_edit', kwargs={
+                'tour_area_id': tour_area.id, 'tours_date': tours_date.isoformat()
+            }),
+            'roster_admin': reverse('tour_roster_admin', kwargs={
+                'tour_area_id': tour_area.id, 'tours_date': tours_date.isoformat()
+            }),
+        },
+        'tour_areas': { area.id: area.to_json() for area in Area.objects.filter(active=True) },
+        'admin_url': reverse('admin:peddleconcept_tour_change', args=['TOUR_ID']),
+        'tours_date': json_datetime(tours_date),
+        'tour_area_id': tour_area.id,
+    }
 
 @user_passes_test(staff_required)
 def schedule_editor_view(request, tour_area_id=None, tours_date=None):
@@ -33,25 +54,19 @@ def schedule_editor_view(request, tour_area_id=None, tours_date=None):
     else:
         tours_date, tour_area = res
 
-    date_filter = get_date_filter(tours_date, tours_date, 'time_start')
+    jsvars = get_tour_admin_jsvars(request, tour_area, tours_date)
+    return render_base(request, 'schedules_editor', react=True, jsvars=jsvars)
 
-    ctx = {
-        'date': tours_date,
-        'tour_area': tour_area,
-    }
-
-    jsvars = {
-        'urls': {
-            'tour_sched_data': reverse('tour_sched_admin_data'),
-            'tours_for': reverse('tours_for', kwargs={
-                'tour_area_id': tour_area.id, 'tours_date': tours_date.isoformat()}),
-        },
-        'tour_areas': { area.id: area.to_json() for area in Area.objects.filter(active=True) },
-        'admin_url': reverse('admin:peddleconcept_tour_change', args=['TOUR_ID']),
-        'tours_date': json_datetime(tours_date),
-        'tour_area_id': tour_area.id,
-    }
-    return render_base(request, 'schedules_editor', react=True, context=ctx, jsvars=jsvars)
+@user_passes_test(staff_required)
+def roster_admin_view(request, tour_area_id=None, tours_date=None):
+    res = get_schedule_or_redirect(tour_area_id, tours_date)
+    if isinstance(res, HttpResponse):
+        return res
+    else:
+        tours_date, tour_area = res
+    
+    jsvars = get_tour_admin_jsvars(request, tour_area, tours_date)
+    return render_base(request, 'roster_admin', react=True, jsvars=jsvars)
 
 @user_passes_test(staff_required)
 @require_http_methods(['POST'])
@@ -79,14 +94,15 @@ def schedule_admin_data_view(request):
     
     if action == 'close':
         pass # empty success response on editor save & close
-    elif action in ['get_rosters', 'save_rosters']:
+    elif action in ['open_rosters', 'get_rosters', 'save_rosters']:
         rosters_list = get_tour_rosters(tours_date, tour_area)
-        rosters, rosterErrors = sync_deputy_rosters(tours_date, tour_area, dry_run=('save' not in action))
+        rosters, rosterErrors = sync_deputy_rosters(tours_date, tour_area, rosters_list, dry_run=('save' not in action))
         
         data.update({
             'rosters': [r.to_json() for r in rosters],
             'rosterErrors': [r.to_json() for r in rosterErrors],
-            'tourArea': tourArea.to_json(),
+            'tourArea': tour_area.to_json(),
+            'tours_date': json_datetime(tours_date),
         })
     else:
         data.update(get_tour_schedule_data(tour_area, tours_date, in_editor=True))

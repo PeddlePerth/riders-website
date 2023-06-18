@@ -62,5 +62,7 @@ class Roster(MutableDataRecord):
             'warning_override_comment': self.warning_override_comment,
             'published': self.published,
             'shift_notes': self.shift_notes,
+            'source_row_state': self.source_row_state,
+            'source_row_id': self.source_row_id,
         }
         

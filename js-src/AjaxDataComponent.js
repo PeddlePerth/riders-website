@@ -41,22 +41,23 @@ class AjaxDataComponent extends Component {
         // Save the data to the server
         const postData = {
             ...this.props.extraPostData,
-            ...this.props.getPostData(this.state.data),
+            ...this.props.getPostData(this.state.data, verb),
             action: verb,
         };
-        post_data(this.props.postUrl, postData, (ok, response) => {
+        post_data(this.props.postUrl, postData, (ok, responseOrig) => {
+            let response = responseOrig;
             if (onComplete) {
-                response = onComplete(ok, response);
+                response = onComplete(ok, response, verb);
             }
-            this.onDataLoaded(ok, response); 
+            this.onDataLoaded(ok, response, responseOrig, verb); 
         });
     }
 
     // Retrieve updated data & reload component
-    onDataLoaded(ok, response) {
+    onDataLoaded(ok, response, responseOrig, action) {
         //console.log("got data:", ok, response);
         if (!ok) {
-            this.setState({ errorMsg: response || 'error requesting data'});
+            this.setState({ errorMsg: String(responseOrig) || 'error requesting data'});
             return;
         } else {
             this.setState({ errorMsg: null, lastSave: new Date() });
@@ -85,8 +86,8 @@ class AjaxDataComponent extends Component {
     componentDidMount() {
         window.onbeforeunload = this.beforeUnload;
         post_data(this.props.postUrl, {
-            ...this.props.extraPostData,
             action: 'open',
+            ...this.props.extraPostData,
         }, this.onDataLoaded);
         //console.log("loading Ajax data from " + this.props.postUrl);
     }

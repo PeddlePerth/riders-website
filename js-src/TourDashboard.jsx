@@ -29,7 +29,7 @@ function getBadges(summaryData, tourAreas) {
             if (!area) continue;
             if (areaInfo.needs_riders > 0)
                 dayBadges.push(<AreaInfoBadge key={area_id + '_1'} tourArea={area} infoBg="danger">
-                    {areaInfo.needs_riders}<span className="bi-exclamation"/></AreaInfoBadge>);
+                    {areaInfo.needs_riders}<span className="bi-exclamation-triangle-fill ms-1"/></AreaInfoBadge>);
             if (areaInfo.filled > 0)
                 dayBadges.push(<AreaInfoBadge key={area_id + '_2'} tourArea={area} infoBg="success">
                     {areaInfo.filled}<span className="bi-check"/></AreaInfoBadge>);
@@ -227,7 +227,7 @@ function TourDashboard({ date_today, data_url, last_scan_begin, last_scan, scan_
             </Col>
             <Col key={11}>
                 <Badge key={1} className="d-block mb-1" pill bg="danger">
-                    <span className="bi-exclamation"/>&nbsp;Tours - Riders Needed</Badge>
+                    <span className="bi-exclamation-triangle-fill"/>&nbsp;Tours - Riders Needed</Badge>
                 <Badge key={2} className="d-block mb-1" pill bg="success">
                     <span className="bi-check"/>&nbsp;Tours - Riders Filled</Badge>
                 <Badge key={3} className="d-block" pill bg="secondary">

@@ -266,10 +266,10 @@ def sync_deputy_rosters(tours_date, area, tour_rosters_list, dry_run=False):
 
     api = DeputyAPI()
     try:
-        dpt_rosters = api.query_rosters(tours_date, tours_date, area, people=people_by_srid)
+        dpt_rosters = api.query_rosters(tours_date, tours_date, area, people_by_srid=people_by_srid)
     except Exception as e:
         logger.error('Deputy query_rosters error: %s: %s' % (type(e).__name__, str(e)))
-        return
+        return [], []
     
     # Live Rosters in Deputy
     dpt_rosters_by_key = {} # match with tour schedule shifts
@@ -387,14 +387,14 @@ def sync_deputy_rosters(tours_date, area, tour_rosters_list, dry_run=False):
         dpt_rosters_by_key[key].source_row_id: dpt_rosters_by_key[key]
         for key in dpt_rosters_extra
     }
-    if not dry_run and ids_to_delete:
+    if not dry_run and rosters_to_delete:
         try:
-            deleted_ids = api.delete_rosters(ids_to_delete)
+            deleted_ids = api.delete_rosters(rosters_to_delete.keys())
         except Exception as e:
             deleted_ids = []
             logger.error('delete_rosters error %s: %s' % (type(e).__name__, str(e)))
     else:
-        deleted_ids = ids_to_delete
+        deleted_ids = rosters_to_delete.keys()
 
     # delete non-matching rosters
     for srid, roster in rosters_to_delete.items():

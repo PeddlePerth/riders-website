@@ -314,10 +314,10 @@ def get_tour_rosters(tours_date, area):
 
     tour_riders = TourRider.objects.filter(
         **get_date_filter(tours_date, tours_date, 'tour__time_start'),
-        tour__area = area,
+        tour__tour_area = area,
         person__source_row_state='live',
         person__source_row_id__isnull=False,
-    ).select_related('tour', 'tour__area', 'person').order_by(
+    ).select_related('tour', 'tour__tour_area', 'person').order_by(
         'tour__time_start',
     )
 
@@ -377,6 +377,8 @@ def get_tour_rosters(tours_date, area):
                     (tr.tour.time_end - tr.tour.time_start).total_seconds() // 60,
                 )
             )
+            prev_tr = tr
+
         my_roster_notes.append('%s: Finish' % format_time(end_time))
 
         roster = Roster(
@@ -387,7 +389,14 @@ def get_tour_rosters(tours_date, area):
             time_end = end_time,
             tour_slots = my_roster_slots,
             shift_notes = '\n'.join(my_roster_notes),
-        )        
+        )
+        rosters.append(roster)
+
+    logger.info("Generated %d rosters for tours in area %s on date %s" % (
+        len(rosters), area.name, tours_date.isoformat(),
+    ))
+    return rosters
+
 
 def save_tour_schedule(tours_date, schedule_data):
     # get the tours and sessions in a dict keyed by id

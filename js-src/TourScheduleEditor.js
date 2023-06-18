@@ -1,11 +1,11 @@
 const {
-    Stack, Button, Row, Col, Badge
+    Stack, Button, Row, Col, Badge, Spinner
 } = require('react-bootstrap');
 const TourRow = require('./TourScheduleRow.js');
 const TimespanLock = require('./TimespanLock.js');
 const { join_bikes, count_bikes } = require('./BikesWidget.js');
 const EditableTextField = require('./EditableTextField.js');
-const { plural, format_time_12h, htmlLines } = require('./utils.js');
+const { plural, format_time_12h, htmlLines, format_date, WEEKDAYS } = require('./utils.js');
 const { useMemo, useState } = require('react');
 const { CheckButton } = require('./components.js');
 
@@ -75,6 +75,7 @@ class TourScheduleEditor extends React.Component {
             riderTimes: {},
             riderTimesUnavail: {},
             selectedSess: null,
+            loading: false,
         };
 
         let [riderTimes, riderTimesUnavail, conflictRiders, availRiders] = this.getRiderTimeLocks();
@@ -277,10 +278,17 @@ class TourScheduleEditor extends React.Component {
 
     render() {
         let sess = this.state.selectedSess ? this.props.sessions[this.state.selectedSess] : null;
+        let area = window.jsvars.tour_areas[window.jsvars.tour_area_id];
 
         const hasVenues = Object.values(this.props.tours).some(
             tour => (tour.venues && tour.venues.length > 0));
         return <div className="mx-3">
+            <h2>
+                <Badge bg="none" style={{ backgroundColor: area.colour }}>
+                    { area.name }
+                </Badge>
+                Editing schedule for {WEEKDAYS[(new Date(window.jsvars.tours_date)).getDay() - 1]} { format_date(window.jsvars.tours_date) }
+            </h2>
             <Row className="justify-content-center">
             { this.state.availability ? <Col xs={12} xl={2}>
             <div className="position-sticky overflow-scroll" style={{top: '0', maxHeight: '100vh'}}>
@@ -318,42 +326,63 @@ class TourScheduleEditor extends React.Component {
                 <Stack direction="horizontal" className="editor-menu my-1 py-1 position-sticky bg-light"
                     style={{ top: '0', height: '48px', zIndex: '11' }}>
                     <Button key={2} variant="primary" className="me-1" 
-                    onClick={() => this.props.onSave('close', (ok, response) => {
-                        if (ok) window.location.href = window.jsvars.urls.tours_for;
-                        return {
-                            ...this.props, // ignore empty POST data response and re-use already loaded data
-                        };
-                    })}>
+                    onClick={() => {
+                        this.props.onSave('close', (ok, response) => {
+                            if (ok) {
+                                window.location.href = window.jsvars.urls.tours_for;
+                            } else {
+                                this.setState({loading: false});
+                            }
+                            return {
+                                ...this.props, // ignore empty POST data response and re-use already loaded data
+                            };
+                        });
+                        this.setState({loading: 'save-view'});
+                    }}>
+                        { this.state.loading == 'save-view' ? <Spinner animation="border" className="me-1" size="sm"/> : null }
                         Save &amp; View Schedule
                     </Button>
-                    <Button key={4} variant="primary" className="me-1" onClick={() => this.props.onSave('get_rosters', (ok, response => {
-                        if (ok) {
-                            this.props.setPage('rosters_view');
-                            return {
-                                ...this.props,
-                                ...response,
-                            };
-                        } else {
-                            return {
-                                ...this.props, // keep existing data in case of error
-                            };
-                        }
-                    }))}><i className="bi-phone-vibrate-fill me-1"/>Save &amp; View Rosters</Button>
-                    <Button key={1} variant={ this.props.isSaved ? 'secondary' : 'success' } className="me-1"
-                        onClick={() => this.props.onSave('save', (ok, response) => {
-                            if (ok) { // save response won't update Deputy unavailability, keep the previously loaded data
+                    <Button key={4} variant="primary" className="me-1" onClick={() => {
+                        this.props.onSave('get_rosters', (ok, response) => {
+                            if (ok) {
+                                window.history.replaceState(null, '', window.jsvars.urls.roster_admin);
+                                this.props.setPage('roster_admin');
                                 return {
+                                    ...this.props,
                                     ...response,
-                                    rider_time_off: this.props.rider_time_off,
                                 };
                             } else {
-                                return { ... this.props }; // keep existing data but show save error
+                                this.setState({ loading: false });
+                                return {
+                                    ...this.props, // keep existing data in case of error
+                                };
                             }
-                        })}
-                    >Save</Button>
-                    <Badge bg="info" key={3}>{ this.props.saveStatus }</Badge>
-                    { this.props.errorMsg ? <Badge bg="danger" key={4}>{ this.props.errorMsg }</Badge> : null }
-                    <CheckButton checked={this.state.availability} variant="secondary" className="ms-1"
+                        });
+                        this.setState({ loading: 'get-rosters' });
+                    }}>
+                        { this.state.loading == 'get-rosters' ? <Spinner animation="border" className="me-1" size="sm"/> : null }
+                        <i className="bi-phone-vibrate-fill me-1"/>Save &amp; View Rosters
+                    </Button>
+                    <Button key={1} variant={ this.props.isSaved ? 'secondary' : 'success' } className="me-1"
+                        onClick={() => {
+                            this.props.onSave('save', (ok, response) => {
+                                this.setState({ loading: false });
+                                if (ok) { // save response won't update Deputy unavailability, keep the previously loaded data
+                                    return {
+                                        ...response,
+                                        rider_time_off: this.props.rider_time_off,
+                                    };
+                                } else {
+                                    return { ... this.props }; // keep existing data but show save error
+                                }
+                            });
+                            this.setState({ loading: 'save' });
+                        }}>
+                        { this.state.loading == 'save' ? <Spinner animation="border" className="me-1" size="sm"/> : null }
+                        Save</Button>
+                    <Badge bg="info" className="me-1" key={3}>{ this.props.saveStatus }</Badge>
+                    { this.props.errorMsg ? <Badge bg="danger" className="me-1" key={44}>{ this.props.errorMsg }</Badge> : null }
+                    <CheckButton checked={this.state.availability} variant="secondary" className="me-1"
                         onChange={(val) => this.setState({availability: val})} text="Show Available Riders" />
                 </Stack>
                 <div key={0}>
