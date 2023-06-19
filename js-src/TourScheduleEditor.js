@@ -115,7 +115,7 @@ class TourScheduleEditor extends React.Component {
             riderTimes[r.id] = new TimespanLock(first_session_start, last_session_end);
             riderTimesUnavail[r.id] = new TimespanLock(first_session_start, last_session_end);
             if (r.active != true || r.rider_class == null) {
-                riderTimesUnavail.lock_timespan(first_session_start, last_session_end);
+                riderTimesUnavail[r.id].lock_timespan(first_session_start, last_session_end);
             }
         });
 

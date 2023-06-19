@@ -9,4 +9,6 @@ from django.conf import settings
 import random, string
 
 class PeddleUser(AbstractUser):
+    def __str__(self):
+        return self.username
     pass

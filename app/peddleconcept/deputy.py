@@ -240,7 +240,7 @@ def sort_rosters(rosters_list):
         key=lambda r: r.time_start
     )
 
-def sync_deputy_rosters(tours_date, area, tour_rosters_list, dry_run=False):
+def sync_deputy_rosters(tours_date, area, tour_rosters_list, publish_keys=None, dry_run=False):
     """
     Shift swaps? Some rosters in Deputy may be changed remotely - if they match the key then 
         we could update them locally.
@@ -260,7 +260,7 @@ def sync_deputy_rosters(tours_date, area, tour_rosters_list, dry_run=False):
     """
 
     people_by_srid = {
-        p.source_row_id for p in Person.objects.filter(source_row_state='live')
+        p.source_row_id: p for p in Person.objects.filter(source_row_state='live')
         if p.source_row_id
     }
 
@@ -276,19 +276,11 @@ def sync_deputy_rosters(tours_date, area, tour_rosters_list, dry_run=False):
     dpt_rosters_manual = [] # rosters not created automatically in Deputy will not be affected by the sync
     for roster in dpt_rosters:
         key = roster.cmp_key()
-        if dpt_rosters_by_key._is_manual:
+        if roster._is_manual:
             dpt_rosters_manual.append(roster)
             continue
 
-        dpt_rosters_by_key[roster.cmp_key()] = roster
-        
-        if roster.person_id and roster.person_id in key_rosters:
-            logger.warning("Got duplicated deputy roster for person %s on date %s" % (
-                roster.person.name, roster.time_start.date().isoformat(),
-            ))
-        elif roster.person_id is None:
-            if roster.employee_id:
-                logger.warning("Missing local record for Person with Deputy Employee Id %s" % roster.employee_id)
+        dpt_rosters_by_key[key] = roster
         
     # Rosters calculated from tour schedule (source of truth for all roster data)
     tour_rosters_by_key = {
@@ -322,7 +314,7 @@ def sync_deputy_rosters(tours_date, area, tour_rosters_list, dry_run=False):
     ))
     # Add rosters to Deputy & record changelogs for successful items
     rosters_added = [ tour_rosters_by_key[key] for key in tour_rosters_extra ]
-    if not dry_run:
+    if not dry_run and len(rosters_added) > 0:
         try:
             rosters_added = api.add_rosters(rosters_added)
         except Exception as e:
@@ -334,6 +326,7 @@ def sync_deputy_rosters(tours_date, area, tour_rosters_list, dry_run=False):
             num_add_ok += 1
             if (chglog := tour_rosters_by_key[key].mark_source_added()):
                 changelogs.append(chglog)
+            r.source_row_state = 'added'
             results.append(r)
         else:
             r.source_row_state = 'add_error'
@@ -348,19 +341,26 @@ def sync_deputy_rosters(tours_date, area, tour_rosters_list, dry_run=False):
         roster = tour_rosters_by_key[key]
         dpt_roster = dpt_rosters_by_key[key]
         roster.source_row_id = dpt_roster.source_row_id # make sure Deputy ID is preserved
+        if publish_keys is not None:
+            roster.published = key in publish_keys
+        else:
+            roster.published = dpt_roster.published
 
         if (chglog := roster.update_from_instance(dpt_roster)):
             roster.source_row_state = 'changed' 
             changelogs.append(chglog)
             rosters_to_update[roster.source_row_id] = roster
+            if publish_keys is not None:
+                roster.published = key in publish_keys
+
         else:
             roster.source_row_state = 'unchanged' # record change status with source_row_state for the Roster viewer
             num_unchanged += 1
-            results.append(r)
+            results.append(roster)
     
     if not dry_run and rosters_to_update:
         try:
-            updated_ids, update_error_ids = api.update_rosters(rosters_to_update)
+            updated_ids, update_error_ids = api.update_rosters(rosters_to_update.values())
         except Exception as e:
             logger.error('update_rosters error %s: %s' % (type(e).__name__, str(e)))
             updated_ids = []
@@ -405,13 +405,20 @@ def sync_deputy_rosters(tours_date, area, tour_rosters_list, dry_run=False):
             results.append(roster)
         else:
             num_delete_fail += 1
+            roster.source_row_state = 'delete_error'
             results_errors.append(roster)
 
     logger.info('%sSync Deputy rosters: added %d (%d failed), updated %d (%d unchanged, %d failed), deleted %d (%d failed), %d changelogs' % (
         'DRY_RUN: ' if dry_run else '', num_add_ok, num_add_fail, num_update_ok, num_unchanged, num_update_fail, num_delete_ok, num_delete_fail, len(changelogs),
     ))
     if not dry_run:
-        ChangeLog.bulk_create(changelogs)
+        ChangeLog.objects.bulk_create(changelogs)
+        results_final = []
+        for r in results:
+            if not r.source_row_state == 'deleted':
+                results_final.append(r)
+            r.source_row_state = 'live'
+        results = results_final
 
     return sort_rosters(results), sort_rosters(results_errors)
 

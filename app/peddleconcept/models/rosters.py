@@ -12,7 +12,8 @@ class Roster(MutableDataRecord):
     """
     MUTABLE_FIELDS = (
         'person', 'area', 'time_start', 'time_end', 'open_shift', 'approval_required',
-        'warning_comment', 'warning_override_comment', 'published', 'shift_notes', 'confirm_status', 'swap_status',
+        'warning_comment', 'warning_override_comment', 'published', 'shift_notes', 
+        #'confirm_status', 'swap_status',
     )
 
     person = models.ForeignKey('Person', on_delete=models.SET_NULL, null=True, blank=True,
@@ -64,5 +65,6 @@ class Roster(MutableDataRecord):
             'shift_notes': self.shift_notes,
             'source_row_state': self.source_row_state,
             'source_row_id': self.source_row_id,
+            'readonly': getattr(self, '_is_manual', False),
         }
         

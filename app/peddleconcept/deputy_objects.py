@@ -2,6 +2,8 @@ import logging
 from datetime import datetime, timedelta
 from django.utils.timezone import make_aware
 from peddleconcept.models import Area, Person, Roster
+from peddleconcept.util import json_datetime
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -89,8 +91,8 @@ def parse_roster_json(data, employee_dict=None, area_dict=None, api_creator_id=N
         warning_override_comment = data.get('WarningOverrideComment') or '',
         published = data.get('Published') or False,
         shift_notes = data.get('Comment') or '',
-        confirm_status = data.get('ConfirmStatus'),
-        swap_status = data.get('SwapStatus'),
+        #confirm_status = data.get('ConfirmStatus'),
+        #swap_status = data.get('SwapStatus'),
     )
     # extra attributes not stored in the DB
     roster.employee_id = employee_id
@@ -113,9 +115,7 @@ def parse_roster_json(data, employee_dict=None, area_dict=None, api_creator_id=N
 
 def make_roster_json(roster):
     data = {
-        'Id': roster.source_row_id if roster.source_row_id else None,
-        'Employee': roster.person.source_row_id if roster.person and roster.person.source_row_id else None,
-        'OperationalUnit': roster.area.source_row_id if roster.area and roster.area.source_row_id else None,
+        'OperationalUnit': int(roster.area.source_row_id) if roster.area and roster.area.source_row_id else None,
         'StartTime': int(roster.time_start.timestamp()),
         'EndTime': int(roster.time_end.timestamp()),
         'Open': roster.open_shift,
@@ -124,18 +124,33 @@ def make_roster_json(roster):
         'WarningOverrideComment': roster.warning_override_comment,
         'Published': roster.published,
         'Comment': roster.shift_notes,
-        'ConfirmStatus': roster.confirm_status,
-        'SwapStatus': roster.swap_status,
+        #'ConfirmStatus': roster.confirm_status,
+        #'SwapStatus': roster.swap_status,
         'Slots': [
             {
                 "blnEmptySlot": False,
                 "strType": "B",
+                "intStart": (slot['time_start'] - json_datetime(roster.time_start)) // 1000,
+                "intEnd": (slot['time_end'] - json_datetime(roster.time_start)) // 1000,
                 "intUnixStart": slot['time_start'] // 1000,
                 "intUnixEnd": slot['time_end'] // 1000,
                 "strTypeName": "Meal Break" if i == 0 else "Rest Break",
+                "strState": "Not Start",
+                "mixedActivity": {
+                    "intState": 0,
+                    "blnCanStartEarly": 0,
+                    "blnCanEndEarly": 0,
+                    "blnIsMandatory": 1 if i == 0 else 0,
+                    "strBreakType": "M" if i == 0 else "R",
+                }
             }
             for i, slot in enumerate(roster.tour_slots)
             if slot['type'] == 'break'
         ],
     }
+    if roster.source_row_id:
+        data['Id'] = int(roster.source_row_id)
+    if roster.person and roster.person.source_row_id:
+        data['Employee'] = int(roster.person.source_row_id)
+    logger.debug('make_roster_json: %s', json.dumps(data, indent=2))
     return data

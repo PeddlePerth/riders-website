@@ -245,7 +245,7 @@ class DeputyAPI:
         })
         
         return [
-            parse_roster_json(item, employee_dict=people_by_srid, area_dict={area.id: area}, api_creator_id=self.creator_id)
+            parse_roster_json(item, employee_dict=people_by_srid, area_dict={area.source_row_id: area}, api_creator_id=self.creator_id)
             for item in resp
         ]
 
@@ -259,9 +259,10 @@ class DeputyAPI:
         # assign each roster a unique identifier to identify exactly which ones exist and which ones are errored
         roster_correlation = {}
         for roster in roster_list:
-            uid = uuid.uuid4() # random UUID for identifying roster
+            uid = str(uuid.uuid4()) # random UUID for identifying roster
             roster._shift_notes = roster.shift_notes
-            roster_correlation[uid] = roster.shift_notes = str(uid)
+            roster.shift_notes = uid
+            roster_correlation[uid] = roster
 
         resp = self.post('api/v1/resource/Roster/BULK', [
             make_roster_json(roster) for roster in roster_correlation.values()
@@ -271,6 +272,7 @@ class DeputyAPI:
         errors = resp.get('errors')
         if isinstance(errors, list):
             logger.warning("Received roster bulk upload error for %d items" % len(errors))
+            logger.debug('response json: %s', resp)
 
         if isinstance(res, list):
             for dpt_roster in res:
@@ -279,11 +281,13 @@ class DeputyAPI:
                     logger.warning("Missing UUID in comment for Deputy roster, result=%s" % dpt_roster)
                     continue
                 roster.source_row_id = dpt_roster.get('Id')
-                roster.shift_notes = roster._shift_notes
         
+        for roster in roster_correlation.values():
+            roster.shift_notes = roster._shift_notes
+
         resp = self.post('api/v1/resource/Roster/BULK', [
             {
-                'Id': roster.source_row_id,
+                'Id': int(roster.source_row_id),
                 'Comment': roster._shift_notes,
             }
             for roster in roster_correlation.values()
@@ -306,29 +310,30 @@ class DeputyAPI:
 
         if isinstance(errors, list):
             logger.warning("update_rosters got errors for %d rows" % len(errors))
+            logger.debug("response json: %s", resp)
             error_ids = [
-                err['resource'].get('Id') for err in errors
+                str(err['resource'].get('Id')) for err in errors
             ]
         else:
-            error_ids = None
+            error_ids = []
         
         if isinstance(res, list):
             updated_ids = [
-                r.get('Id') for r in res
+                str(r.get('Id')) for r in res
             ]
         else:
-            updated_ids = None
+            updated_ids = []
 
         return updated_ids, error_ids
 
     def delete_rosters(self, roster_ids):
         resp = self.post('api/v1/supervise/roster/discard', {
-            'intRosterArray': roster_ids,
+            'intRosterArray': [ int(id) for id in roster_ids ],
         })
 
         if not isinstance(resp, list):
             return []
         else:
             return [
-                item.get('Id') for item in resp
+                str(item.get('Id')) for item in resp
             ]

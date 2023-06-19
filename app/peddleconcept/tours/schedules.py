@@ -343,7 +343,7 @@ def get_tour_rosters(tours_date, area):
             'time_end': json_datetime(tr_list[0].tour.time_start),
         }]
         my_roster_notes = [
-            '%s: Setup at WH' % format_time(start_time),
+            '%s - Setup at WH' % format_time(start_time),
         ]
 
         end_time = tr_list[-1].tour.time_end
@@ -371,7 +371,7 @@ def get_tour_rosters(tours_date, area):
                 'tour_id': tr.tour_id,
             })
             my_roster_notes.append(
-                '%s: %s (%d minutes)' % (
+                '%s - %s (%d minutes)' % (
                     format_time(tr.tour.time_start),
                     tr.tour.tour_type,
                     (tr.tour.time_end - tr.tour.time_start).total_seconds() // 60,
@@ -379,7 +379,7 @@ def get_tour_rosters(tours_date, area):
             )
             prev_tr = tr
 
-        my_roster_notes.append('%s: Finish' % format_time(end_time))
+        my_roster_notes.append('%s - Finish' % format_time(end_time))
 
         roster = Roster(
             source = 'auto',
@@ -421,7 +421,7 @@ def save_tour_schedule(tours_date, schedule_data):
                 tr.person.id: tr for tr in tour.riders.all()
             }
             tour_riders_updated_ids = set() # by TourRider ID
-            tour_riders_existing_ids = set((tr.id for tr in tour.riders.all()))
+            tour_riders_existing_ids = set((tr.person.id for tr in tour.riders.all()))
         
             for tr_json in t.get('riders', []):
                 rider = riders.get(int(tr_json.get('rider_id')))
@@ -446,7 +446,7 @@ def save_tour_schedule(tours_date, schedule_data):
                     # update existing TourRider
                     tr.rider_role = tr_json.get('rider_role') or ''
                     tr.save()
-                    tour_riders_updated_ids.add(tr.id)
+                    tour_riders_updated_ids.add(tr.person.id)
                 my_riders[rider.id] = tr
 
             tr_ids_deleted = tour_riders_existing_ids - tour_riders_updated_ids

@@ -70,7 +70,9 @@ function CheckButton({ checked, text, variant="success", size, className, onChan
         variant={checked ? variant : ("outline-" + variant)}
         checked={checked}
         size={size}
-        onChange={(e) => onChange(e.currentTarget.checked)}
+        onChange={(e) => {
+            if (onChange) onChange(e.currentTarget.checked)
+        }}
         >
             { checked ? <span className="bi-check-square-fill"></span> : <span className="bi-square"></span> }
             <span key={2} className="ms-2">{ text }</span>

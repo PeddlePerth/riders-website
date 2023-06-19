@@ -53,7 +53,9 @@ function ScheduleAdminApp({ initialPage }) {
                 in_editor: true,
                 action: 'open_rosters',
             }}
-            getPostData={ ({ rosters }, action) => (action == 'save_rosters' ? { rosters } : { action: action })}
+            getPostData={ ({ rosters }, action) => (action == 'save_rosters' ? 
+                { publish_rosters: Object.values(rosters).filter(r => r.published).map(r => r.cmp_key) } : 
+                { action: action })}
             postUrl={window.jsvars.urls.tour_sched_data}
             // getPostData={ }
         />;

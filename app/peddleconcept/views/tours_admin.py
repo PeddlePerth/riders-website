@@ -86,7 +86,7 @@ def schedule_admin_data_view(request):
         return HttpResponseBadRequest('Invalid tour_area_id or tours_date')
     
     if 'tours' in reqdata:
-        save_tour_schedule(tours_date, reqdata['tours'])
+        save_tour_schedule(tours_date, reqdata)
 
     data = {}
     if action == 'open':
@@ -96,7 +96,8 @@ def schedule_admin_data_view(request):
         pass # empty success response on editor save & close
     elif action in ['open_rosters', 'get_rosters', 'save_rosters']:
         rosters_list = get_tour_rosters(tours_date, tour_area)
-        rosters, rosterErrors = sync_deputy_rosters(tours_date, tour_area, rosters_list, dry_run=('save' not in action))
+        rosters, rosterErrors = sync_deputy_rosters(tours_date, tour_area, rosters_list, 
+            publish_keys=reqdata.get('publish_rosters'), dry_run=('save' not in action))
         
         data.update({
             'rosters': [r.to_json() for r in rosters],
