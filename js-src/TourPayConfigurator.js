@@ -71,55 +71,18 @@ function TourPayConfigurator({ payConfig, showOnlyTourTypes, onChange }) {
             </p>
             <p className="hints">Note: Changes to the pay config here will apply to all other past/future tour pay reports as well.</p>
         </div>
-        <Row className="g-2">
-            <Col key={1}>
-            <TabularConfigWidget
-                title="General Options"
-                >
-                { general_fields.map((f, i) => <TabularConfigRow
-                    key={i}
-                    title={f.label}
-                    fields={[f]}
-                    hint={f.hint}
-                    rowData={payConfig}
-                    onChange={onChange}
-                />) }
-            </TabularConfigWidget>
-            </Col>
-            <Col key={2}>
-            <TabularConfigWidget
-                title="Tour-specific Pay Rates" 
-                colHeadings={tour_type_fields.map(f => f.label)}
-                rowTitleHeading="Tour Type">
-                { tourTypes.map(([tour_type, tt], index) => (
-                    <TabularConfigRow key={index}
-                        rowData={tt}
-                        fields={tour_type_fields}
-                        onChange={onChange}
-                        title={tour_type}
-                        titleWidth={4}
-                    />
-                )
-            )}
-            </TabularConfigWidget>
-            </Col>
-            <Col key={3}>
-                <TabularConfigWidget
-                    title="Role-specific Pay Rates"
-                    colHeadings={tour_role_fields.map(f => f.label)}
-                    rowTitleHeading="Rider Role">
-                    { Object.entries(payConfig.roles).map(([role_id, role], index) => (
-                        <TabularConfigRow key={index}
-                            rowData={role}
-                            fields={tour_role_fields}
-                            onChange={onChange}
-                            title={role.title}
-                            titleWidth={6}
-                        />
-                    ))}
-                </TabularConfigWidget>
-            </Col>
-        </Row>
+        <TabularConfigWidget
+            title="General Options"
+            >
+            { general_fields.map((f, i) => <TabularConfigRow
+                key={i}
+                title={f.label}
+                fields={[f]}
+                hint={f.hint}
+                rowData={payConfig}
+                onChange={onChange}
+            />) }
+        </TabularConfigWidget>
     </div>;
 }
 

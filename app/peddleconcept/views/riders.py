@@ -337,7 +337,7 @@ def rider_setup_verify_view(request):
                         email_verified = True,
                         active = False,
                         signup_status = 'confirmed',
-                        rider_class = 'rider_probationary',
+                        rider_class = '00_rider_probationary',
                         last_seen = timezone.now(),
                     )
 

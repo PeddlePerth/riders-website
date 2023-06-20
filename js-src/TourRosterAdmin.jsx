@@ -8,9 +8,10 @@ const AddedBadge = () => <Badge bg="success" className="me-1"><i className="fs-5
 const DeletedBadge = () => <Badge bg="danger" className="me-1"><i className="fs-5 me-1 bi-cloud-slash"/>Deleted</Badge>;
 const UnchangedBadge = () => <Badge bg="secondary" className="me-1"><i className="fs-5 me-1 bi-cloud-check"/>Unchanged</Badge>;
 const OKBadge = () => <Badge bg="success" className="me-1"><i className="fs-5 me-1 bi-cloud-check"/>OK</Badge>;
+const ManualBadge = () => <Badge bg="success" className="me-1"><i className="fs-5 me-1 bi-cloud-check"/>Added in Deputy</Badge>;
 
 const RosterItem = ({ id, roster, onEdit, error }) => {
-    let variant = roster.published ? 'success' : 'secondary';
+    let variant = roster.manual ? 'primary' : (roster.published ? 'success' : 'secondary');
     let icon = null;
     let readonly = roster.source_row_state == 'deleted';
     // row states: live, deleted, changed, unchanged
@@ -26,19 +27,22 @@ const RosterItem = ({ id, roster, onEdit, error }) => {
         else if (roster.source_row_state == 'unchanged') icon = <UnchangedBadge/>;
         else if (roster.source_row_state == 'deleted') icon = <DeletedBadge/>;
         else if (roster.source_row_state == 'live') icon = <OKBadge/>;
+        else if (roster.source_row_state == 'manual') icon = <ManualBadge/>;
     }
 
     return <div className={`m-1 p-1 rounded-3 border border-${variant} bg-${variant}`} style={{['--bs-bg-opacity']: 0.25}}>
-        <div className="fw-bold lh-base d-flex align-items-center">
+        <div className="fw-bold lh-base d-flex flex-wrap align-items-center">
             <span key={1} className="py-1 me-2">{ format_time_12h(roster.time_start) } &mdash; { format_time_12h(roster.time_end) }</span>
-            <span key={2} className="me-2">{ icon }</span>
-            { error || readonly ? null : <CheckButton checked={roster.published} onChange={(val) => {
-                if (error) return;
-                roster.published = val;
-                onEdit();
-             }} text="Publish" className="ms-auto"/> }
+             { error || readonly ? null : <CheckButton checked={roster.published} onChange={(val) => {
+                    if (error) return;
+                    roster.published = val;
+                    onEdit();
+                }} text="Publish" className="ms-auto"/> }
         </div>
-        <div>{ roster.rider_name }</div>
+        <div className="d-flex align-items-center">
+            <span>{ roster.rider_name }</span>
+            <span className="ms-auto mt-1">{ icon }</span>
+        </div>
         <div className="p-1 text-secondary">
             { htmlLines(roster.shift_notes) }
         </div>
@@ -49,8 +53,9 @@ const TourRosterViewer = ({ tourArea, rosters, rosterErrors, onEdit, onSave, onA
     const [loading, setLoading] = useState(false);
     if (!rosters || !rosterErrors) return null;
 
-    let syncedRosters = rosters.filter(r => r.source_row_state == 'unchanged' || r.source_row_state == 'live');
-    let chgRosters = rosters.filter(r => r.source_row_state != 'unchanged' && r.source_row_state != 'live');
+    const syncedStates = ['unchanged', 'live', 'manual'];
+    let syncedRosters = rosters.filter(r => syncedStates.includes(r.source_row_state));
+    let chgRosters = rosters.filter(r => !syncedStates.includes(r.source_row_state));
 
     return <Container>
         <div className="TourRosterViewer">
@@ -66,18 +71,9 @@ const TourRosterViewer = ({ tourArea, rosters, rosterErrors, onEdit, onSave, onA
         </h2>
         <div className="mb-1">
             <Button key={1} variant="secondary" className="me-1" onClick={() => {
-                setLoading('back');
-                onSave('open', (ok, response, action) => {
-                    if (ok) {
-                        window.onbeforeunload = null;
-                        window.location.href = window.jsvars.urls.schedules_editor;
-                    } else {
-                        setLoading(false);
-                    }
-                    return { rosters, rosterErrors };
-                });
+                window.onbeforeunload = null;
+                window.location.href = window.jsvars.urls.schedules_editor;
             }}>
-                { loading == 'back' ? <Spinner animation="border" className="me-1" size="sm"/> : null }
                 Cancel &amp; back to editor
             </Button>
             <Button variant="success" className="me-1" onClick={() => {
@@ -134,10 +130,10 @@ const TourRosterViewer = ({ tourArea, rosters, rosterErrors, onEdit, onSave, onA
             </Row>
         </> } 
         { chgRosters.length == 0 ? null : <>
-            <div className="mt-3 d-flex align-items-center">
+            <div className="mt-3">
                 <h4>Rosters to update</h4>
             </div>
-            <Row className="g-5">
+            <Row className="g-2" xs={1} md={2} lg={4}>
                 { chgRosters.map((roster, i) => 
                     <Col key={i}>
                         <RosterItem roster={roster} onEdit={onEdit}/>
@@ -146,7 +142,7 @@ const TourRosterViewer = ({ tourArea, rosters, rosterErrors, onEdit, onSave, onA
         </> }
         { syncedRosters.length == 0 ? null : <>
             <h4 className="mt-3">Rosters already in Deputy</h4>
-            <Row className="g-5">
+            <Row className="g-2" xs={1} md={2} lg={4}>
                 { syncedRosters.map((roster, i) => 
                     <Col key={i}>
                         <RosterItem roster={roster} onEdit={onEdit}/>

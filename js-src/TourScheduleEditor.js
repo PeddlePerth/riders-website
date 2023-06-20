@@ -329,6 +329,7 @@ class TourScheduleEditor extends React.Component {
                     onClick={() => {
                         this.props.onSave('close', (ok, response) => {
                             if (ok) {
+                                window.onbeforeunload = null;
                                 window.location.href = window.jsvars.urls.tours_for;
                             } else {
                                 this.setState({loading: false});

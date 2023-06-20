@@ -3,6 +3,8 @@ from django.forms.widgets import TextInput
 from django import forms
 from django.db import models, transaction
 from django.template.loader import render_to_string
+from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 import json
 from .models import *
 from .actions import download_as_csv
@@ -141,29 +143,39 @@ class PersonAdmin(MyModelAdmin):
 
     @admin.action(description='Make core riders')
     def make_core(self, request, queryset):
-        num_updated = queryset.filter(rider_class__isnull=False).update(is_core_rider=True)
-        messages.success(request, '%d riders are now core riders' % num_updated)
+        to_update = queryset.filter(rider_class__isnull=False)
+        num_updated = to_update.update(is_core_rider=True)
+        riders_updated = ', '.join(to_update.values_list('display_name', flat=True))
+        messages.success(request, 'New CORE riders: %s' % (num_updated, riders_updated))
 
     @admin.action(description='Make non-core riders')
     def make_non_core(self, request, queryset):
         num_updated = queryset.update(is_core_rider=False)
-        messages.success(request, '%d riders are now non-core riders' % num_updated)
+        riders_updated = ', '.join(queryset.values_list('display_name', flat=True))
+        messages.success(request, 'No longer CORE riders: %s' % (riders_updated))
 
     @admin.action(description='Promote riders')
     def promote_riders(self, request, queryset):
-        num_updated = 0
+        riders_updated = []
         rider_classes = sorted((c[0] for c in Person.RIDER_CLASS_CHOICES))
+
         for obj in queryset:
             if not obj.rider_class:
                 obj.rider_class = rider_classes[0]
                 num_updated += 1
             else:
-                i = rider_classes.index(obj.rider_class)
+                try:
+                    i = rider_classes.index(obj.rider_class)
+                except:
+                    continue
                 if i < len(rider_classes) - 1:
                     obj.rider_class = rider_classes[i + 1]
-                    num_updated += 1
+                    riders_updated.append(
+                        format_html('<b>{}</b> is now <b>{}</b>', obj.display_name, obj.rider_class)
+                    )
+            obj.override_pay_rate = None
             obj.save()
-        messages.success(request, '%d of %d riders made into riders or promoted' % (num_updated, queryset.count()))
+        messages.success(request, mark_safe('Riders promoted: <br>' + ('<br>'.join(riders_updated))))
 
     @admin.display(description='Rider Status')
     def rider_status_html(self, obj):

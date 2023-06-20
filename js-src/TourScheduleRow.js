@@ -3,7 +3,7 @@ const TourRidersWidget = require('./TourRidersWidget.js');
 const EditableTextField = require('./EditableTextField.js');
 const RiderWidget = require('./RiderWidget.js');
 const { BikesWidget, TSBikesInfo, TSRiderInfo } = require('./BikesWidget.js');
-const { TourVenuesEditorV2, makeVenues } = require('./TourVenuesEditor.js');
+const { TourVenuesEditorV2, makeVenues, get_venues_summary } = require('./TourVenuesEditor.js');
 const { TSCancelledBadge } = require('./TourScheduleViewer.jsx');
 
 const tour_fields = {
@@ -81,6 +81,7 @@ const TourRow = ({tour, allRiders, allVenues, bikeTypes, canAddRider, onAddRider
                     title="Add venues from preset"
                     onClick={() => {
                         tour.venues = makeVenues(tour.id, preset);
+                        tour.venue_notes = get_venues_summary(tour, allVenues).join('\n');
                         // force component update??
                         onEdit();
                     }}
@@ -92,6 +93,7 @@ const TourRow = ({tour, allRiders, allVenues, bikeTypes, canAddRider, onAddRider
                     title="Clear Venues"
                     onClick={() => {
                         tour.venues = [];
+                        tour.venue_notes = '';
                         onEdit();
                     }}>
                     <span className="bi-trash"></span>&nbsp;Venues

@@ -60,9 +60,9 @@ const RiderTSTour = forwardRef(({ past, now, tourRider, tour, session, allVenues
                     {session.title}
                 </div>
                 { tourRider.rider_role ? <Badge bg="primary" className="ms-2">{tourRider.rider_role}</Badge> : null }
-                <div key={1} className="d-inline-block">
-                    <span className="ms-2 d-inline-block text-decoration-underline fs-5">{tour.customer_name}</span>&nbsp;
-                    <a className="ms-2 d-inline-block" href={`tel:${tour.customer_contact}`}>{tour.customer_contact}</a>
+                <div key={1} className="d-flex flex-wrap fs-5">
+                    <span className="ms-2 text-decoration-underline">{htmlLines(tour.customer_name)}</span>&nbsp;
+                    <a className="ms-2" href={`tel:${tour.customer_contact}`}>{tour.customer_contact}</a>
                 </div>
                 <div key={2} className="d-inline-block">
                     <TSBikesInfo tour={tour} bikeTypes={bikeTypes} className="ms-2 d-inline-block" />
@@ -81,7 +81,7 @@ const RiderTSTour = forwardRef(({ past, now, tourRider, tour, session, allVenues
                 <div className="ms-2" key={3}><b>Qty:</b> {htmlLines(tour.quantity)}</div>
                 <div className="ms-2"><b>Pickup at:</b> {htmlLines(tour.pickup_location)}</div>
             </Col>
-            { (tour.notes && tour.notes.trim()) || venuesText ? 
+            { ((tour.notes && tour.notes.trim()) || tour.venue_notes) ? 
             <Col className="" xs={12} md={6}>
                 <div className="p-1 bg-info bg-opacity-10 rounded">
                     { tour.venue_notes ? htmlLines(tour.venue_notes + '\n\n' + tour.notes) : htmlLines(tour.notes) }

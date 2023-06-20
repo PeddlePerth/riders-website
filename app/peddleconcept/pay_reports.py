@@ -54,20 +54,6 @@ def get_tour_pay_config():
     return pay_config
 
 def save_tour_pay_config(pay_config):
-    conf = {
-        'tour_types': {
-            tour_type: {
-                'pay_rate': int(tt.get('pay_rate', 0)),
-                'paid_duration_mins': int(tt.get('paid_duration_mins', 0)),
-            } for tour_type, tt in pay_config.get('tour_types', {}).items()
-        },
-        'roles': {
-            role_id: {
-                'pay_rate': int(role['pay_rate'])
-            } for role_id, role in pay_config.get('roles', {}).items() if role_id
-        },
-    }
-
     #for f in ('max_total_break_mins', 'default_paid_break_mins', 'daily_unpaid_break_mins', 'min_daily_mins'):
     for f in (
         'max_total_break_mins',
@@ -83,37 +69,21 @@ def save_tour_pay_config(pay_config):
 
 def get_pay_rate(pay_config, tour_rider):
     """ returns the _default_ hourly pay rate for a given TourRider along with a reason """
-    default = (
+
+    # Rider pay rate takes precedence
+    if tour_rider.person.override_pay_rate:
+        return (tour_rider.person.override_pay_rate, 'Fixed rider rate')
+
+    rider_rate = tour_rider.person.pay_rate()
+    if rider_rate:
+        return (rider_rate, tour_rider.person.rider_class_label())
+
+    # fall back to defailt rate
+    return (
         pay_config.get('default_rate', 30),
         'Default rate'
     )
     
-    # Rider pay rate takes precedence
-    if tour_rider.person.override_pay_rate:
-        return (tour_rider.person.override_pay_rate, 'Fixed rider rate')
-    
-    role_cfg = pay_config['roles'].get(tour_rider.rider_role)
-    role_pay = (
-            role_cfg['pay_rate'],
-            '%s pay rate' % RIDER_ROLES.get(tour_rider.rider_role, (None, 'Unknown'))[1]
-        ) if (tour_rider.rider_role != '' and role_cfg and 'pay_rate' in role_cfg) else None
-    
-    tour_cfg = pay_config['tour_types'].get(tour_rider.tour.tour_type)
-    tour_pay = (
-            tour_cfg['pay_rate'],
-            'Tour specific pay rate'
-        ) if (tour_cfg and 'pay_rate' in tour_cfg) else None
-
-    if not tour_pay:
-        if not role_pay:
-            return default
-        else:
-            return role_pay
-
-    if role_pay and role_pay[0] != tour_pay[0]:
-        return role_pay
-    else:
-        return tour_pay
 
 
 def generate_tour_pay_slots(start_date, end_date, pay_config):
@@ -202,7 +172,7 @@ def generate_tour_pay_slots(start_date, end_date, pay_config):
                             # all breaks under the paid_break_max time are paid, disregard other options
                             if break_mins > paid_break_max:
                                 ps_break.pay_rate = 0
-                                ps_break.pay_reason = '(not paid)'
+                                ps_break.pay_reason = ''
                                 ps_break.description = 'Unpaid break'
                             else:
                                 ps_break.description = 'Paid break'
@@ -221,7 +191,7 @@ def generate_tour_pay_slots(start_date, end_date, pay_config):
                             else:
                                 ps_break.description = 'Unpaid break'
                                 ps_break.pay_rate = 0
-                                ps_break.pay_reason = '(not paid)'
+                                ps_break.pay_reason = ''
 
                         my_total_break += break_mins
                         my_total_mins += break_mins
@@ -388,6 +358,8 @@ def load_tour_pay_report(start_date, end_date, recalculate=True, reset=False):
             'phone': r.phone,
             'title': r.display_name,
             'pay_rate': r.override_pay_rate,
+            'rider_class': r.rider_class_label(),
+            'rider_pay': r.pay_rate(),
             'bsb': r.bank_bsb,
             'acct': r.bank_acct,
         })

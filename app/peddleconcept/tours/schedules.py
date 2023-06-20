@@ -351,18 +351,20 @@ def get_tour_rosters(tours_date, area):
         prev_tr = None
         for tr in tr_list:
             if prev_tr is not None:
-                my_roster_slots.append({
-                    'type': 'break',
-                    'description': 'Tour break',
-                    'time_start': json_datetime(prev_tr.tour.time_end),
-                    'time_end': json_datetime(tr.tour.time_start),
-                })
-                my_roster_notes.append(
-                    '%s: %d minute break' % (
-                        format_time(prev_tr.tour.time_end),
-                        (tr.tour.time_start - prev_tr.tour.time_end).total_seconds() // 60,
+                break_mins = (tr.tour.time_start - prev_tr.tour.time_end).total_seconds() // 60
+                if break_mins > 0:
+                    my_roster_slots.append({
+                        'type': 'break',
+                        'description': 'Tour break',
+                        'time_start': json_datetime(prev_tr.tour.time_end),
+                        'time_end': json_datetime(tr.tour.time_start),
+                    })
+                    my_roster_notes.append(
+                        '%s-%s - break' % (
+                            format_time(prev_tr.tour.time_end),
+                            format_time(tr.tour.time_start),
+                        )
                     )
-                )
             my_roster_slots.append({
                 'type': 'tour',
                 'time_start': json_datetime(tr.tour.time_start),
@@ -371,10 +373,10 @@ def get_tour_rosters(tours_date, area):
                 'tour_id': tr.tour_id,
             })
             my_roster_notes.append(
-                '%s - %s (%d minutes)' % (
+                '%s-%s - %s' % (
                     format_time(tr.tour.time_start),
+                    format_time(tr.tour.time_end),
                     tr.tour.tour_type,
-                    (tr.tour.time_end - tr.tour.time_start).total_seconds() // 60,
                 )
             )
             prev_tr = tr

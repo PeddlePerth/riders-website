@@ -276,10 +276,6 @@ def sync_deputy_rosters(tours_date, area, tour_rosters_list, publish_keys=None, 
     dpt_rosters_manual = [] # rosters not created automatically in Deputy will not be affected by the sync
     for roster in dpt_rosters:
         key = roster.cmp_key()
-        if roster._is_manual:
-            dpt_rosters_manual.append(roster)
-            continue
-
         dpt_rosters_by_key[key] = roster
         
     # Rosters calculated from tour schedule (source of truth for all roster data)
@@ -346,7 +342,7 @@ def sync_deputy_rosters(tours_date, area, tour_rosters_list, publish_keys=None, 
         else:
             roster.published = dpt_roster.published
 
-        if (chglog := roster.update_from_instance(dpt_roster)):
+        if (chglog := dpt_roster.update_from_instance(roster)):
             roster.source_row_state = 'changed' 
             changelogs.append(chglog)
             rosters_to_update[roster.source_row_id] = roster
@@ -383,10 +379,16 @@ def sync_deputy_rosters(tours_date, area, tour_rosters_list, publish_keys=None, 
         for roster in rosters_to_update.values():
             results.append(roster)
     
-    rosters_to_delete = {
-        dpt_rosters_by_key[key].source_row_id: dpt_rosters_by_key[key]
-        for key in dpt_rosters_extra
-    }
+    rosters_to_delete = {}
+    for key in dpt_rosters_extra:
+        rst = dpt_rosters_by_key[key]
+        if rst._is_manual:
+            # don't delete extra manual rosters - just show them
+            rst.source_row_state = 'manual'
+            results.append(rst)
+        else:
+            rosters_to_delete[rst.source_row_id] = rst
+    
     if not dry_run and rosters_to_delete:
         try:
             deleted_ids = api.delete_rosters(rosters_to_delete.keys())

@@ -53,8 +53,7 @@ function WeeklyTourSummary({ summaryData, weekStart, tourAreas }) {
         if (!summaryData) return;
         for (var toursDay of summaryData.tours) {
             if (toursDay.date < weekStart) continue;
-            if (toursDay.date >= weekEnd) break;
-            let isodate = format_iso_date(toursDay.date);
+            if (toursDay.date >= weekEnd) continue;
 
             for (todaysAreaTours of Object.values(toursDay.areas)) {
                 let todaysTours = todaysAreaTours.tours;
@@ -113,10 +112,10 @@ function WeeklyTourSummary({ summaryData, weekStart, tourAreas }) {
                 days[day].area_tours[todaysAreaTours.area_id] = todaysTours;
 
                 todaysTours.editUrl = window.jsvars.edit_url
-                    .replace('DATE', isodate)
+                    .replace('DATE', toursDay.isodate)
                     .replace('AREA_ID', todaysAreaTours.area_id);
                 todaysTours.viewUrl = window.jsvars.view_url
-                    .replace('DATE', isodate)
+                    .replace('DATE', toursDay.isodate)
                     .replace('AREA_ID', todaysAreaTours.area_id);
             }
         }

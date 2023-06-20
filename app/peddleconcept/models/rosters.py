@@ -41,14 +41,14 @@ class Roster(MutableDataRecord):
 
     def cmp_key(self):
         """ return a hashable string value representing the roster for easy comparison with other rosters """
-        return "%s_%d_%d_%s" % (
+        return "%s_%d_%d" % (
             self.person.source_row_id if self.person else '',
             self.time_start.timestamp(),
             self.time_end.timestamp(),
-            ",".join((
-                "%d_%d" % (slot['time_start'] // 1000, slot['time_end'] // 1000)
-                for slot in self.tour_slots if slot['type'] == 'break'
-            )) if isinstance(self.tour_slots, list) else '',
+            #",".join((
+            #    "%d_%d" % (slot['time_start'] // 1000, slot['time_end'] // 1000)
+            #    for slot in self.tour_slots if slot['type'] == 'break'
+            #)) if isinstance(self.tour_slots, list) else '',
         )
 
     def to_json(self):

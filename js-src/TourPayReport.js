@@ -79,8 +79,13 @@ function RiderTourRow({ rider, children }) {
     return <Row className="rider-tours-row g-0">
         <Col xs={1} className="rider-tours-name" key={1}>
             <div key={1}>{ rider.title }</div>
-            <div className="hints" key={3}>{ rider.name }</div>
-            { rider.pay_rate ? <div className="hints" key={2}>Fixed rate: ${rider.pay_rate.toFixed(2)}</div> : null }
+            <div className="hints" key={2}>{ rider.name }</div>
+            { rider.pay_rate ? <div className="hints" key={3}>Fixed rate: ${rider.pay_rate.toFixed(2)}</div> : null }
+            { rider.rider_class ? 
+                <div className="hints fw-bold" key={4}>
+                    {rider.rider_class}&nbsp;
+                    { rider.rider_pay ? `\$${rider.rider_pay.toFixed(2)}/h` : null}
+                </div> : null}
         </Col>
         <Col xs={10} key={2}>
             <Row className="g-0 rider-tours-tours">{ children }</Row>

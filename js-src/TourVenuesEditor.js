@@ -242,8 +242,9 @@ function TourVenuesEditorV2({ tour, allVenues, onChange }) {
 
     function updateVenueSummary() {
         // update the venue text automatically if the venues are changed, and the text has not been changed
-        if (tour.venue_notes == auto_values.venue_notes) 
+        if (!(tour.venue_notes) || tour.venue_notes == auto_values.venue_notes) {
             tour.venue_notes = get_venues_summary(tour, allVenues).join('\n');
+        }
     }
 
     return <div className="TourVenuesEditor">
@@ -290,7 +291,7 @@ function TourVenuesEditorV2({ tour, allVenues, onChange }) {
                     type="textarea"
                     model={tour}
                     fieldName="venue_notes"
-                    onChange={onChange}
+                    onChange={() => { updateVenueSummary(); onChange(); }}
                 />
             </Col>
         </Row>
@@ -310,5 +311,6 @@ function makeVenues(tour_id, preset) {
     console.log('tour venues for ' + tour_id, venues);
     return venues;
 }
+
 
 module.exports = { TourVenuesEditorV2, makeVenues, get_venues_summary };
