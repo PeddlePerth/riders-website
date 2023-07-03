@@ -55,6 +55,7 @@ def get_tour_pay_config():
 
 def save_tour_pay_config(pay_config):
     #for f in ('max_total_break_mins', 'default_paid_break_mins', 'daily_unpaid_break_mins', 'min_daily_mins'):
+    conf = {}
     for f in (
         'max_total_break_mins',
         'daily_unpaid_break_mins',

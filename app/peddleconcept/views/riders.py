@@ -129,10 +129,10 @@ def rider_token_login_migrate_view(request, token=None):
             token__exact = token
         )
     except (PersonToken.DoesNotExist, PersonToken.MultipleObjectsReturned):
-        pass
+        ptoken = None
 
     if ptoken is None or not ptoken.is_valid():
-        logger.error('Failed token login with token="%s"' % request.POST['token'])
+        logger.error('Failed token login with token="%s"' % token)
         messages.error(request, 'Please login using your email address instead.')
         return HttpResponseRedirect(reverse('rider_login'))
     elif not ptoken.person.can_login():
