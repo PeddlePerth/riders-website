@@ -120,6 +120,9 @@ class RezdyScraper:
 
         for i in range(max_retries):
             logger.debug("Attempting login to Rezdy. This is attempt %d." % i)
+            # CLEAR COOKIES before each login attempt - ensure the session is clean
+            logger.debug('Clearing session cookies')
+            self.session.cookies.clear()
             # access the website - redirects to https://app.rezdy.com/login which redirects to
             # https://auth.rezdy.com/oauth2/authorize?action=login&state=...&scope=&response_type=code&approval_prompt=auto&redirect_uri=
             #      https://app.rezdy.com/auth/oauthCallback&client_id=...&code_challenge=[...]
