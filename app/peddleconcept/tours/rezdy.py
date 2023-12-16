@@ -346,21 +346,26 @@ def update_from_rezdy(start_date, end_date, dry_run=False):
 
     num_legacy_orig = len(db_tours_legacy)
     
+    # Note: ANY tour showing up in the Rezdy data is LIVE - it must be LIVE and CORRECT in the DB as well
     # reformat legacy tour source_row_ids into new ones - where they are available in Rezdy data
     rezdy_tours_added = {} # dict of Rezdy Tour ID to DB tour instance
     rezdy_tours_matched = {} # dict of Rezdy Tour ID to DB tour instance
     for srid, t in rezdy_tours.items():
         if (t_legacy := db_tours_legacy.get(t.rezdy_order_id)) and (
             t.tour_type.lower().strip() == t_legacy.tour_type.lower().strip()):
+
             t_legacy = db_tours_legacy.pop(t.rezdy_order_id)
             t_legacy.source_row_id = t.source_row_id # update the existing tour row source ID while we are here
-            rezdy_tours_matched[srid] = t_legacy
+            add_or_update_tour = rezdy_tours_matched[srid] = t_legacy
         elif srid in db_tours:
-            rezdy_tours_matched[srid] = db_tours[srid]
+            add_or_update_tour = rezdy_tours_matched[srid] = db_tours[srid]
         else:
-            if (chglog := t.mark_source_added()):
-                changelogs.append(chglog)
-            rezdy_tours_added[srid] = t
+            add_or_update_tour = rezdy_tours_added[srid] = t
+
+        # check for source_row_state changes for all tours matched in the DB - we can track any data glitches easily
+        if (chglog := add_or_update_tour.mark_source_added()):
+            changelogs.append(chglog)
+        
         t.session = sessions_db[t.rezdy_session_id]
 
     db_tours_not_matched = set(db_tours.keys()) - set(rezdy_tours_matched.keys())
@@ -376,6 +381,7 @@ def update_from_rezdy(start_date, end_date, dry_run=False):
     tours_to_update = []
     for srid, dst_tour in rezdy_tours_matched.items():
         src_tour = rezdy_tours[srid]
+        # update_from_instance should always make source_row_state=live
         if (chglog := dst_tour.update_from_instance(src_tour)) is not None:
             tours_to_update.append(dst_tour)
             changelogs.append(chglog)

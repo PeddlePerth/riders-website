@@ -179,7 +179,7 @@ class MutableDataRecord(models.Model):
             return None
 
         self.source = src_row.source
-
+        
         chg_fields = {}
         for field in self.MUTABLE_FIELDS:
             orig_value = getattr(self, field)
@@ -190,6 +190,13 @@ class MutableDataRecord(models.Model):
                 else:
                     chg_fields[field] = (orig_value, new_value)
 
+        if self.source_row_state != 'live':
+            logger.warning('update_from_instance: Model %s id %s has source_row_state=%s expected LIVE' % (
+                type(self).__name__, self.pk, self.source_row_state
+            ))
+            chg_fields['source_row_state'] = (self.source_row_state, 'live')
+            self.source_row_state = 'live'
+        
         if chg_fields:
             return ChangeLog(
                 model_type = self._meta.model_name,
@@ -228,13 +235,27 @@ class MutableDataRecord(models.Model):
         """ Returns changelog for row when first found in data source """
         if self.source_row_state == 'live' and self.pk:
             return # nothing to do
+        
+        if self.source_row_state == 'deleted':
+            # row has been undeleted somehow: possible from glitches in the source data
+            return ChangeLog(
+                model_type = self._meta.model_name,
+                change_remote = self.source,
+                change_type = 'undeleted' if not push else 'push_recreate',
+                model_description = '%s [pk=%s source_row_id=%s]' % (
+                    str(self), self.pk, self.source_row_id,
+                ),
+                change_description = 'source_row_id=%s pk=%s undeleted: %s' % (self.source_row_id, self.pk, str(self)),
+            )
+        else:
+            return ChangeLog(
+                model_type = self._meta.model_name,
+                change_remote = self.source,
+                change_type = 'created' if not push else 'push_create',
+                model_description = '%s [pk=%s source_row_id=%s]' % (
+                    str(self), self.pk, self.source_row_id,
+                ),
+                change_description = 'source_row_id=%s pk=%s created: %s' % (self.source_row_id, self.pk, str(self)),
+            )
         self.source_row_state = 'live'
-        return ChangeLog(
-            model_type = self._meta.model_name,
-            change_remote = self.source,
-            change_type = 'created' if not push else 'push_create',
-            model_description = '%s [pk=%s source_row_id=%s]' % (
-                str(self), self.pk, self.source_row_id,
-            ),
-            change_description = 'source_row_id=%s pk=%s created: %s' % (self.source_row_id, self.pk, str(self)),
-        )
+
